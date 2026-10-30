@@ -57,6 +57,7 @@
   background: var(--atlas-surface);
   font: var(--atlas-type-body)/1.5 var(--atlas-font);
   -webkit-font-smoothing: antialiased;
+  overflow-wrap: anywhere;
 }
 .atlas-app button,
 .atlas-app input,

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { validateSnapshot } from '../packages/model/src/index.js';
+import { apiProject } from '../apps/demo/src/fixtures/index.js';
 
 test('inspect an API contract and trace its source', async ({ page }) => {
   const errors: string[] = [];
@@ -101,13 +102,11 @@ test('invalid import preserves the current project and valid OpenAPI import stay
       externalRequests.push(request.url());
   });
   await page.goto('/');
-  await page
-    .getByLabel('Import context JSON')
-    .setInputFiles({
-      name: 'broken.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from('{broken'),
-    });
+  await page.getByLabel('Import context JSON').setInputFiles({
+    name: 'broken.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from('{broken'),
+  });
   await expect(page.getByRole('alert')).toContainText('not valid JSON');
   await expect(
     page.getByRole('heading', { name: 'Atlas Commerce API', exact: true }),
@@ -120,6 +119,41 @@ test('invalid import preserves the current project and valid OpenAPI import stay
     0,
   );
   expect(externalRequests).toEqual([]);
+});
+
+test('same-ID imports reconcile removed views and modules', async ({ page }) => {
+  await page.goto('/?project=atlas-commerce&view=place-order&module=orders-module');
+  const replacement = structuredClone(apiProject);
+  const operation = replacement.nodes.find((node) => node.id === 'create-order')!;
+  delete operation.moduleId;
+  replacement.nodes = [operation];
+  replacement.edges = [];
+  replacement.project.capabilities = ['api'];
+  replacement.views = [
+    {
+      id: 'new-api',
+      kind: 'api',
+      label: 'Replacement API',
+      description: 'A new contract slice.',
+      nodeIds: [operation.id],
+    },
+  ];
+  await page
+    .getByLabel('Import context JSON')
+    .setInputFiles({
+      name: 'replacement.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(JSON.stringify(replacement)),
+    });
+  await expect(page.getByRole('status')).toContainText('is ready');
+  await expect(page).not.toHaveURL(/module=orders-module/);
+  await expect(page).not.toHaveURL(/view=place-order/);
+  await expect(page.getByRole('heading', { name: 'No objects in this selection.' })).toHaveCount(0);
+  await page
+    .getByRole('navigation', { name: 'Project views' })
+    .getByRole('button', { name: /Replacement API/ })
+    .click();
+  await expect(page.getByRole('button', { name: /^Create an order Accepts/ })).toBeVisible();
 });
 
 test('mobile layout keeps navigation, inspector and controls reachable', async ({ page }) => {
