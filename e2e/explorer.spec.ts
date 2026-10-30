@@ -3,6 +3,32 @@ import { readFile } from 'node:fs/promises';
 import { validateSnapshot } from '../packages/model/src/index.js';
 import { apiProject } from '../apps/demo/src/fixtures/index.js';
 
+test('loads the snapshot validator without dynamic function evaluation', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.addInitScript(() => {
+    const OriginalFunction = window.Function;
+    Object.defineProperty(window, 'Function', {
+      configurable: false,
+      writable: false,
+      value: new Proxy(OriginalFunction, {
+        apply() {
+          throw new EvalError('Dynamic function evaluation is disabled');
+        },
+        construct() {
+          throw new EvalError('Dynamic function evaluation is disabled');
+        },
+      }),
+    });
+  });
+
+  await page.goto('/');
+  await expect(
+    page.getByRole('heading', { name: 'Atlas Commerce API', exact: true }),
+  ).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test('inspect an API contract and trace its source', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));

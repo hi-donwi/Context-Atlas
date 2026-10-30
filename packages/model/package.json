@@ -14,9 +14,12 @@
     "./schema": "./dist/context-snapshot.schema.json"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "npm run generate:check && tsc -p tsconfig.json",
+    "generate": "node ./scripts/generate-validator.mjs",
+    "generate:check": "node ./scripts/generate-validator.mjs --check"
   },
-  "dependencies": {
-    "ajv": "8.20.0"
+  "devDependencies": {
+    "ajv": "8.20.0",
+    "esbuild": "0.28.2"
   }
 }

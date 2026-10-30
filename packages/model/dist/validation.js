@@ -1,6 +1,5 @@
-import Ajv from 'ajv';
-import schema from './context-snapshot.schema.json' with { type: 'json' };
-const checkShape = new Ajv({ allErrors: true, strict: true }).compile(schema);
+import validateGeneratedSchema from './generated-schema-validator.js';
+const checkShape = validateGeneratedSchema;
 function safeSourcePath(path) {
     if (/^[a-z][a-z\d+.-]*:/i.test(path) ||
         path.startsWith('/') ||
