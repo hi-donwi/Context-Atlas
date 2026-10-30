@@ -84,8 +84,16 @@ export function Sidebar({
         <ChevronDown size={14} aria-hidden="true" />
       </label>
       <div className="atlas-project-type">
-        {snapshot.project.kind.replace('-', ' ')} project <span className="atlas-dot-separator" />{' '}
-        {snapshot.project.version}
+        <span
+          className="atlas-project-kind"
+          title={`${snapshot.project.kind.replace('-', ' ')} project`}
+        >
+          {snapshot.project.kind.replace('-', ' ')} project
+        </span>
+        <span className="atlas-dot-separator" aria-hidden="true" />
+        <span className="atlas-project-version" title={snapshot.project.version}>
+          {snapshot.project.version}
+        </span>
       </div>
       <nav aria-label="Project views">
         <span className="atlas-eyebrow atlas-nav-heading">EXPLORE</span>

@@ -154,6 +154,31 @@ test('same-ID imports reconcile removed views and modules', async ({ page }) => 
   await expect(page.getByRole('button', { name: /^Create an order Accepts/ })).toBeVisible();
 });
 
+test('long project versions stay bounded in the sidebar', async ({ page }) => {
+  const snapshot = structuredClone(apiProject);
+  const revision = `revision-${'0123456789'.repeat(8)}`;
+  snapshot.project.version = revision;
+  await page.goto('/');
+  await page.getByLabel('Import context JSON').setInputFiles({
+    name: 'long-version.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(snapshot)),
+  });
+  await expect(page.getByRole('status')).toContainText('is ready');
+
+  const projectType = page.locator('.atlas-project-type');
+  const assertBounded = async () => {
+    const bounds = await projectType.boundingBox();
+    expect(bounds?.height).toBeLessThanOrEqual(24);
+    await expect(projectType.locator('.atlas-project-version')).toHaveAttribute('title', revision);
+  };
+  await assertBounded();
+
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.getByRole('button', { name: 'Open navigation' }).click();
+  await assertBounded();
+});
+
 test('mobile layout keeps navigation, inspector and controls reachable', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
