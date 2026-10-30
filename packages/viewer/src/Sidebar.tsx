@@ -61,9 +61,11 @@ export function Sidebar({
           }}
           disabled={!onProjectChange}
         >
-          <option value={snapshot.project.id} hidden>
-            {snapshot.project.name}
-          </option>
+          {!projects.some((project) => project.id === snapshot.project.id) && (
+            <option value={snapshot.project.id} hidden>
+              {snapshot.project.name}
+            </option>
+          )}
           {projects.map((project) => (
             <option key={project.id} value={project.id}>
               {project.name}
