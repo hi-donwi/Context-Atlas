@@ -96,4 +96,12 @@ describe('importOpenApi', () => {
     importOpenApi(document);
     expect(document).toEqual(original);
   });
+
+  it('ignores specification extensions on paths and retains declared authentication scopes', () => {
+    const snapshot = importOpenApi({
+      openapi: '3.1.0', info: { title: 'Scoped API', version: '1' },
+      paths: { 'x-owner': 'synthetic-team', '/orders': { post: { security: [{ oauth: ['orders:create'] }], responses: { '201': { description: 'Created' } } } } },
+    });
+    expect(snapshot.nodes.find((node) => node.kind === 'operation')?.details?.endpoint?.authentication).toBe('oauth [orders:create]');
+  });
 });

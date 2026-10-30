@@ -70,6 +70,7 @@ function project(input: unknown, options: OpenApiImportOptions): ContextSnapshot
     }
   };
   for (const [path, pathValue] of Object.entries(paths)) {
+    if (path.startsWith('x-')) continue;
     if (!path.startsWith('/')) throw new OpenApiImportError(`OpenAPI path "${path}" must begin with /. `);
     const pathItem = object(resolveLocal(document, pathValue), `path ${path}`);
     if (pathItem.$ref !== undefined) throw new OpenApiImportError(`Path ${path} uses an unresolved reference. Supply local path definitions.`);
@@ -100,7 +101,10 @@ function project(input: unknown, options: OpenApiImportOptions): ContextSnapshot
       }
       const security = operation.security ?? document.security ?? [];
       if (!Array.isArray(security)) throw new OpenApiImportError(`Security for ${path} must be an array.`);
-      const securityNames = security.map((entry) => Object.keys(object(entry, `security for ${path}`)).join(' + '));
+      const securityNames = security.map((entry) => Object.entries(object(entry, `security for ${path}`)).map(([name, scopes]) => {
+        if (!Array.isArray(scopes) || scopes.some((scope) => typeof scope !== 'string')) throw new OpenApiImportError(`Security scopes for ${path} must be an array of strings.`);
+        return scopes.length ? `${name} [${scopes.join(', ')}]` : name;
+      }).join(' + '));
       const authentication = securityNames.length ? securityNames.map((name) => name || 'Public').join(' or ') : 'Public';
       const parameters: JsonValue[] = [];
       for (const value of [pathItem.parameters, operation.parameters]) {
