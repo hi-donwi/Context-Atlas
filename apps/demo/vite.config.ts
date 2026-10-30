@@ -6,10 +6,21 @@ export default defineConfig({
   plugins: [react()],
   base: './',
   resolve: {
-    alias: {
-      '@context-atlas/model': fileURLToPath(new URL('../../packages/model/src/index.ts', import.meta.url)),
-      '@context-atlas/viewer': fileURLToPath(new URL('../../packages/viewer/src/index.ts', import.meta.url)),
-      '@context-atlas/adapter-openapi': fileURLToPath(new URL('../../packages/adapter-openapi/src/index.ts', import.meta.url)),
-    },
+    alias: [
+      {
+        find: /^@context-atlas\/model$/,
+        replacement: fileURLToPath(new URL('../../packages/model/src/index.ts', import.meta.url)),
+      },
+      {
+        find: /^@context-atlas\/viewer$/,
+        replacement: fileURLToPath(new URL('../../packages/viewer/src/index.ts', import.meta.url)),
+      },
+      {
+        find: /^@context-atlas\/adapter-openapi$/,
+        replacement: fileURLToPath(
+          new URL('../../packages/adapter-openapi/src/index.ts', import.meta.url),
+        ),
+      },
+    ],
   },
 });
