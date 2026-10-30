@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ContextSnapshot } from '@context-atlas/model';
-import { filterNodes, readSelection, selectionUrl } from './explorer-state.js';
+import { filterNodes, readSelection, reconcileSelection, selectionUrl } from './explorer-state.js';
 
 export function useExplorer(snapshot: ContextSnapshot) {
-  const [selection, setSelection] = useState(() =>
+  const [storedSelection, setSelection] = useState(() =>
     readSelection(snapshot, typeof window === 'undefined' ? '' : window.location.search),
+  );
+  const selection = useMemo(
+    () => reconcileSelection(snapshot, storedSelection),
+    [snapshot, storedSelection],
   );
   const [query, setQuery] = useState('');
   const [display, setDisplay] = useState<'graph' | 'list'>('graph');
@@ -31,6 +35,17 @@ export function useExplorer(snapshot: ContextSnapshot) {
     () => setSelection((previous) => ({ ...previous, nodeId: null })),
     [],
   );
+  useEffect(() => {
+    setSelection((previous) => {
+      const next = reconcileSelection(snapshot, previous);
+      return previous.viewId === next.viewId &&
+        previous.nodeId === next.nodeId &&
+        previous.moduleId === next.moduleId
+        ? previous
+        : next;
+    });
+    setQuery('');
+  }, [snapshot]);
   useEffect(() => {
     const url = selectionUrl(
       snapshot.project.id,

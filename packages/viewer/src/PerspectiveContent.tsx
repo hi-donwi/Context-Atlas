@@ -20,10 +20,18 @@ export function PerspectiveContent({
   graphView: boolean;
   showOverview: boolean;
 }) {
+  const visibleIds = new Set(state.nodes.map((node) => node.id));
+  const overviewSnapshot = {
+    ...snapshot,
+    nodes: state.nodes,
+    edges: snapshot.edges.filter(
+      (edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target),
+    ),
+  };
   return (
     <>
       {showOverview ? (
-        <Overview snapshot={snapshot} onView={state.onView} onSelect={state.onSelect} />
+        <Overview snapshot={overviewSnapshot} onView={state.onView} onSelect={state.onSelect} />
       ) : state.nodes.length === 0 ? (
         <div className="atlas-empty-state">
           <Search size={28} aria-hidden="true" />

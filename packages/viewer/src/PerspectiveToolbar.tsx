@@ -12,8 +12,7 @@ export function PerspectiveToolbar({
   graphView: boolean;
 }) {
   const modules = snapshot.nodes.filter((node) => node.kind === 'module');
-  const viewTitle =
-    state.kind === 'overview' ? 'Project overview' : (state.view?.label ?? 'Project context');
+  const viewTitle = state.view?.label ?? 'Project overview';
   return (
     <>
       <div className="atlas-view-heading">

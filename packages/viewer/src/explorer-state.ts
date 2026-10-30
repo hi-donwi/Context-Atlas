@@ -1,5 +1,37 @@
 import type { ContextNode, ContextSnapshot } from '@context-atlas/model';
 
+export interface ExplorerSelection {
+  viewId: string;
+  nodeId: string | null;
+  moduleId: string;
+}
+
+export function getOverviewId(snapshot: ContextSnapshot): string {
+  const declared = snapshot.views.find((view) => view.kind === 'overview');
+  if (declared) return declared.id;
+  const viewIds = new Set(snapshot.views.map((view) => view.id));
+  let id = 'overview';
+  while (viewIds.has(id)) id = `_${id}`;
+  return id;
+}
+
+export function reconcileSelection(
+  snapshot: ContextSnapshot,
+  previous: { viewId: string | null; nodeId: string | null; moduleId: string | null },
+): ExplorerSelection {
+  const overviewId = getOverviewId(snapshot);
+  return {
+    viewId:
+      previous.viewId === overviewId || snapshot.views.some((view) => view.id === previous.viewId)
+        ? previous.viewId!
+        : overviewId,
+    nodeId: snapshot.nodes.some((node) => node.id === previous.nodeId) ? previous.nodeId : null,
+    moduleId: snapshot.nodes.some((node) => node.id === previous.moduleId && node.kind === 'module')
+      ? previous.moduleId!
+      : 'all',
+  };
+}
+
 export function filterNodes(
   snapshot: ContextSnapshot,
   viewId: string,
@@ -32,14 +64,11 @@ export function layoutNodes(nodes: readonly ContextNode[]) {
 
 export function readSelection(snapshot: ContextSnapshot, search: string) {
   const params = new URLSearchParams(search);
-  const view = params.get('view');
-  const node = params.get('node');
-  const module = params.get('module');
-  return {
-    viewId: snapshot.views.some((v) => v.id === view) ? view! : 'overview',
-    nodeId: snapshot.nodes.some((n) => n.id === node) ? node : null,
-    moduleId: snapshot.nodes.some((n) => n.id === module && n.kind === 'module') ? module! : 'all',
-  };
+  return reconcileSelection(snapshot, {
+    viewId: params.get('view'),
+    nodeId: params.get('node'),
+    moduleId: params.get('module'),
+  });
 }
 
 export function selectionUrl(

@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronRight, GitFork, Layers, Orbit } from 'lucide-react';
-import type { ContextSnapshot, ViewKind } from '@context-atlas/model';
+import type { ContextSnapshot, ContextView } from '@context-atlas/model';
 import { ViewIcon } from './icons.js';
+import { getOverviewId } from './explorer-state.js';
 
 export interface ProjectOption {
   id: string;
@@ -23,10 +24,18 @@ export function Sidebar({
   onProjectChange?: ((id: string) => void) | undefined;
   onClose: () => void;
 }) {
-  const views = [
-    { id: 'overview', kind: 'overview' as ViewKind, label: 'Overview', nodeIds: [] },
-    ...snapshot.views.filter((v) => v.kind !== 'overview'),
-  ];
+  const views: ContextView[] = snapshot.views.some((view) => view.kind === 'overview')
+    ? snapshot.views
+    : [
+        {
+          id: getOverviewId(snapshot),
+          kind: 'overview',
+          label: 'Overview',
+          description: 'Project context summary',
+          nodeIds: snapshot.nodes.map((node) => node.id),
+        },
+        ...snapshot.views,
+      ];
   return (
     <aside className="atlas-sidebar" aria-label="Project navigation">
       <a
@@ -84,7 +93,7 @@ export function Sidebar({
           <button
             key={view.id}
             type="button"
-            className={`atlas-nav-item ${viewId === view.id || (view.kind === 'overview' && !snapshot.views.some((v) => v.id === viewId && v.kind !== 'overview')) ? 'is-active' : ''}`}
+            className={`atlas-nav-item ${viewId === view.id ? 'is-active' : ''}`}
             aria-current={viewId === view.id ? 'page' : undefined}
             onClick={() => {
               onView(view.id);
