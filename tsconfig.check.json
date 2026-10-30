@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@context-atlas/model": ["./packages/model/src/index.ts"],
+      "@context-atlas/adapter-openapi": ["./packages/adapter-openapi/src/index.ts"],
+      "@context-atlas/viewer": ["./packages/viewer/src/index.ts"]
+    }
+  },
+  "include": ["packages/**/*.ts", "packages/**/*.tsx", "apps/**/*.ts", "apps/**/*.tsx", "e2e/**/*.ts", "*.ts"]
+}

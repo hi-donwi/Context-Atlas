@@ -1,0 +1,10 @@
+{
+  "name": "@context-atlas/adapter-openapi",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "files": ["dist"],
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "scripts": { "build": "tsc -p tsconfig.json" },
+  "dependencies": { "@context-atlas/model": "0.1.0" }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@context-atlas/model",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "files": ["dist"],
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./schema": "./dist/context-snapshot.schema.json"
+  },
+  "scripts": { "build": "tsc -p tsconfig.json" },
+  "dependencies": { "ajv": "8.20.0" }
+}
