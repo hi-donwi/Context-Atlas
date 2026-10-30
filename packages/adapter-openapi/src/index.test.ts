@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { validateSnapshot } from '@context-atlas/model';
 import { importOpenApi, OpenApiImportError } from './index.js';
 
 const document = {
@@ -80,7 +81,7 @@ describe('importOpenApi', () => {
   });
 
   it('rejects absolute and traversal source paths', () => {
-    for (const sourcePath of ['/private/openapi.json', '../openapi.json', 'C:\\private\\openapi.json', 'contracts/../openapi.json']) {
+    for (const sourcePath of ['/private/openapi.json', '../openapi.json', 'C:\\private\\openapi.json', 'contracts/../openapi.json', 'contracts\\openapi.json', 'contracts/%2e%2e/openapi.json', 'contracts//openapi.json', 'contracts/openapi.json/']) {
       expect(() => importOpenApi(document, { sourcePath })).toThrow(/source path/i);
     }
   });
@@ -103,5 +104,54 @@ describe('importOpenApi', () => {
       paths: { 'x-owner': 'synthetic-team', '/orders': { post: { security: [{ oauth: ['orders:create'] }], responses: { '201': { description: 'Created' } } } } },
     });
     expect(snapshot.nodes.find((node) => node.kind === 'operation')?.details?.endpoint?.authentication).toBe('oauth [orders:create]');
+  });
+
+  it('deduplicates repeated operation tags without emitting duplicate graph identities', () => {
+    const input = structuredClone(document);
+    input.paths['/items'].post.tags = ['Items', 'Items'];
+    const snapshot = importOpenApi(input);
+    expect(snapshot.nodes.find((node) => node.details?.endpoint?.method === 'POST')?.tags).toEqual(['Items']);
+    expect(new Set(snapshot.edges.map((edge) => edge.id)).size).toBe(snapshot.edges.length);
+    expect(validateSnapshot(snapshot)).toMatchObject({ success: true });
+  });
+
+  it('rejects blank custom project names before returning an invalid snapshot', () => {
+    for (const name of ['', '   ']) expect(() => importOpenApi(document, { name })).toThrow(OpenApiImportError);
+  });
+
+  it('overrides inherited parameters with operation parameters having the same name and location', () => {
+    const snapshot = importOpenApi({
+      openapi: '3.1.0', info: { title: 'Override API', version: '1' },
+      paths: { '/items': {
+        parameters: [{ name: 'limit', in: 'query', schema: { type: 'integer', maximum: 100 } }, { name: 'locale', in: 'query', schema: { type: 'string' } }],
+        get: { parameters: [{ name: 'limit', in: 'query', schema: { type: 'integer', maximum: 10 } }, { name: 'limit', in: 'header', schema: { type: 'string' } }], responses: { '200': { description: 'OK' } } },
+      } },
+    });
+    const parameters = snapshot.nodes.find((node) => node.kind === 'operation')?.details?.endpoint?.parameters;
+    expect(parameters).toEqual([
+      { name: 'limit', in: 'query', schema: { type: 'integer', maximum: 10 } },
+      { name: 'locale', in: 'query', schema: { type: 'string' } },
+      { name: 'limit', in: 'header', schema: { type: 'string' } },
+    ]);
+  });
+
+  it('rejects prototype and unsupported response keys instead of silently losing response data', () => {
+    for (const status of ['__proto__', 'constructor', '600', '20X']) {
+      const input = JSON.parse(`{"openapi":"3.1.0","info":{"title":"Response API","version":"1"},"paths":{"/items":{"get":{"responses":{"${status}":{"description":"Invalid response key"},"200":{"description":"OK"}}}}}}`) as unknown;
+      expect(() => importOpenApi(input)).toThrow(/response.*key/i);
+    }
+  });
+
+  it('supports response ranges, default responses, and opaque extensions without changing the response prototype', () => {
+    const snapshot = importOpenApi({ openapi: '3.1.0', info: { title: 'Responses API', version: '1' }, paths: { '/items': { get: { responses: { '2XX': { description: 'Success range' }, default: { description: 'Other outcomes' }, 'x-owner': 'synthetic-team' } } } } });
+    const responses = snapshot.nodes.find((node) => node.kind === 'operation')?.details?.endpoint?.responses;
+    expect(responses).toEqual({ '2XX': { description: 'Success range' }, default: { description: 'Other outcomes' } });
+    expect(Object.getPrototypeOf(responses)).toBe(Object.prototype);
+    expect(validateSnapshot(snapshot)).toMatchObject({ success: true });
+  });
+
+  it('rejects any projected object that cannot satisfy the public context contract', () => {
+    const input = { openapi: '3.1.0', info: { title: 'Invalid schema label', version: '1' }, paths: {}, components: { schemas: { '': { type: 'object' } } } };
+    expect(() => importOpenApi(input)).toThrow(/projected context is invalid/i);
   });
 });

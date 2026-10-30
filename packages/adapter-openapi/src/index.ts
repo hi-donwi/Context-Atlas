@@ -1,4 +1,5 @@
 import type { ContextEdge, ContextNode, ContextSnapshot, ContextView, JsonValue } from '@context-atlas/model';
+import { validateSnapshot } from '@context-atlas/model';
 import { asJson, object, optionalText, resolveLocal, schemaReferences, text } from './parse.js';
 
 export interface OpenApiImportOptions { projectId?: string; name?: string; sourcePath?: string }
@@ -13,7 +14,13 @@ const safeId = (value: string): string => encodeURIComponent(value);
 
 export function importOpenApi(input: unknown, options: OpenApiImportOptions = {}): ContextSnapshot {
   try {
-    return project(input, options);
+    const snapshot = project(input, options);
+    const validation = validateSnapshot(snapshot);
+    if (!validation.success) {
+      const issue = validation.issues[0];
+      throw new OpenApiImportError(`The projected context is invalid at ${issue?.path ?? '/'}: ${issue?.message ?? 'Unknown validation error'}.`);
+    }
+    return snapshot;
   } catch (error) {
     if (error instanceof OpenApiImportError) throw error;
     throw new OpenApiImportError(error instanceof Error ? error.message : 'The OpenAPI document is invalid.');
@@ -26,13 +33,14 @@ function project(input: unknown, options: OpenApiImportOptions): ContextSnapshot
   if (!/^3\.[01]\.\d+(?:[-+].*)?$/.test(version)) throw new OpenApiImportError('Only OpenAPI 3.0 and 3.1 JSON documents are supported.');
   const info = object(document.info, 'info');
   const title = text(info.title, 'info.title');
+  const displayName = text(options.name ?? title, 'Project name');
   const contractVersion = text(info.version, 'info.version');
   const paths = object(document.paths, 'paths');
   const projectId = options.projectId ?? (title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'imported-api');
   if (!projectId.trim()) throw new OpenApiImportError('A project ID must not be empty.');
   const sourcePath = options.sourcePath ?? 'openapi.json';
-  if (!sourcePath || /^(?:[\\/]|[a-zA-Z]:|[a-zA-Z][a-zA-Z\d+.-]*:)/.test(sourcePath) || sourcePath.split(/[\\/]/).some((part) => part === '..' || part === '.') || /[\u0000-\u001f]/.test(sourcePath)) {
-    throw new OpenApiImportError('The source path must be a safe repository-relative path without traversal.');
+  if (!sourcePath || /^(?:\/|[a-zA-Z][a-zA-Z\d+.-]*:)/.test(sourcePath) || /[\\%\u0000-\u001f\u007f]/.test(sourcePath) || sourcePath.split('/').some((part) => !part || part === '..' || part === '.')) {
+    throw new OpenApiImportError('The source path must be a safe, unencoded repository-relative path without traversal or empty segments.');
   }
   const sourceId = `${projectId}:source:openapi`;
   const nodes: ContextNode[] = [];
@@ -78,15 +86,18 @@ function project(input: unknown, options: OpenApiImportOptions): ContextSnapshot
       if (!methods.has(method)) continue;
       const operation = object(operationValue, `${method.toUpperCase()} ${path}`);
       const responsesInput = object(operation.responses, `responses for ${method.toUpperCase()} ${path}`);
-      if (Object.keys(responsesInput).length === 0) throw new OpenApiImportError(`Responses for ${method.toUpperCase()} ${path} must declare at least one response.`);
-      const responses: Record<string, JsonValue> = {};
+      const responseEntries: [string, JsonValue][] = [];
       for (const [status, responseValue] of Object.entries(responsesInput)) {
+        if (status.startsWith('x-')) continue;
+        if (!/^(?:[1-5](?:\d{2}|XX)|default)$/.test(status)) throw new OpenApiImportError(`Response key "${status}" for ${path} must be an HTTP status, range, or default.`);
         const response = object(resolveLocal(document, responseValue), `response ${status} for ${path}`);
-        responses[status] = asJson(response);
+        responseEntries.push([status, asJson(response)]);
       }
+      if (!responseEntries.length) throw new OpenApiImportError(`Responses for ${method.toUpperCase()} ${path} must declare at least one response.`);
+      const responses: Record<string, JsonValue> = Object.fromEntries(responseEntries);
       const tags = operation.tags === undefined ? ['General'] : operation.tags;
       if (!Array.isArray(tags) || tags.some((tag) => typeof tag !== 'string' || !tag.trim())) throw new OpenApiImportError(`Tags for ${path} must be nonempty strings.`);
-      const tagNames = tags.length ? tags as string[] : ['General'];
+      const tagNames = [...new Set(tags.length ? tags as string[] : ['General'])];
       const operationId = `${projectId}:operation:${method}:${safeId(path)}`;
       const assignedModules: string[] = [];
       for (const tag of tagNames) {
@@ -106,12 +117,18 @@ function project(input: unknown, options: OpenApiImportOptions): ContextSnapshot
         return scopes.length ? `${name} [${scopes.join(', ')}]` : name;
       }).join(' + '));
       const authentication = securityNames.length ? securityNames.map((name) => name || 'Public').join(' or ') : 'Public';
-      const parameters: JsonValue[] = [];
+      const effectiveParameters = new Map<string, JsonValue>();
       for (const value of [pathItem.parameters, operation.parameters]) {
         if (value === undefined) continue;
         if (!Array.isArray(value)) throw new OpenApiImportError(`Parameters for ${path} must be an array.`);
-        for (const parameter of value) parameters.push(asJson(object(resolveLocal(document, parameter), `parameter for ${path}`)));
+        for (const parameterValue of value) {
+          const parameter = object(resolveLocal(document, parameterValue), `parameter for ${path}`);
+          const reference = optionalText(parameter.$ref);
+          const key = reference ? `reference:${reference}` : `${text(parameter.in, `Parameter location for ${path}`)}:${text(parameter.name, `Parameter name for ${path}`)}`;
+          effectiveParameters.set(key, asJson(parameter));
+        }
       }
+      const parameters = [...effectiveParameters.values()];
       const request = operation.requestBody === undefined ? undefined : asJson(object(resolveLocal(document, operation.requestBody), `request body for ${path}`));
       nodes.push({
         ...base, sourceIds: [sourceId], tags: tagNames, id: operationId, kind: 'operation',
@@ -133,7 +150,7 @@ function project(input: unknown, options: OpenApiImportOptions): ContextSnapshot
   if (schemaIds.size) views.push({ id: 'data', kind: 'data', label: 'Data schemas', description: 'Contract schemas, not physical database structure.', nodeIds: [...schemaIds.values()] });
   return {
     schemaVersion: '1.0',
-    project: { id: projectId, name: options.name ?? title, description: optionalText(info.description) ?? 'Imported OpenAPI contract. All facts are declared and remain unverified.', kind: 'api', capabilities: views.map((view) => view.kind), tags: ['imported', 'openapi'], version: contractVersion },
+    project: { id: projectId, name: displayName, description: optionalText(info.description) ?? 'Imported OpenAPI contract. All facts are declared and remain unverified.', kind: 'api', capabilities: views.map((view) => view.kind), tags: ['imported', 'openapi'], version: contractVersion },
     sources: [{ id: sourceId, label: 'Imported OpenAPI contract', path: sourcePath, revision: contractVersion, freshness: 'unknown' }],
     nodes, edges, views,
   };
