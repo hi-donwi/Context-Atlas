@@ -1,0 +1,518 @@
+{
+  "schemaVersion": "1.0",
+  "project": {
+    "id": "fieldnotes-website",
+    "name": "Fieldnotes Website",
+    "kind": "website",
+    "version": "demo-v1",
+    "description": "A synthetic editorial website. Connect a reader journey to its page, form, API contract, service, and stored subscription.",
+    "capabilities": [
+      "overview",
+      "journey",
+      "architecture",
+      "api",
+      "data",
+      "work",
+      "study"
+    ],
+    "tags": [
+      "Synthetic example",
+      "Website",
+      "Newsletter"
+    ]
+  },
+  "sources": [
+    {
+      "id": "website-journey",
+      "path": "docs/journeys/subscribe.md",
+      "label": "Synthetic website journey",
+      "revision": "demo-v1",
+      "repository": "synthetic/example-project",
+      "freshness": "current"
+    },
+    {
+      "id": "website-page",
+      "path": "src/pages/JournalPage.tsx",
+      "label": "Synthetic page implementation",
+      "revision": "demo-v1",
+      "repository": "synthetic/example-project",
+      "freshness": "current"
+    },
+    {
+      "id": "website-api",
+      "path": "contracts/newsletter.openapi.json",
+      "label": "Synthetic newsletter contract",
+      "revision": "demo-v1",
+      "repository": "synthetic/example-project",
+      "freshness": "current"
+    },
+    {
+      "id": "website-schema",
+      "path": "migrations/001_subscriptions.sql",
+      "label": "Synthetic subscription schema",
+      "revision": "demo-v1",
+      "repository": "synthetic/example-project",
+      "freshness": "current"
+    },
+    {
+      "id": "website-work",
+      "path": "docs/work/newsletter.md",
+      "label": "Synthetic newsletter task",
+      "revision": "demo-v1",
+      "repository": "synthetic/example-project",
+      "freshness": "current"
+    }
+  ],
+  "nodes": [
+    {
+      "sourceIds": [
+        "website-journey"
+      ],
+      "status": "implemented",
+      "evidence": "reviewed",
+      "tags": [],
+      "id": "newsletter-module",
+      "kind": "module",
+      "label": "Newsletter",
+      "description": "Reader signup, confirmation, and subscription records."
+    },
+    {
+      "sourceIds": [
+        "website-journey"
+      ],
+      "status": "implemented",
+      "evidence": "reviewed",
+      "tags": [],
+      "id": "site-reader",
+      "kind": "actor",
+      "label": "Reader",
+      "description": "A visitor who chooses to receive future journal updates.",
+      "moduleId": "newsletter-module"
+    },
+    {
+      "sourceIds": [
+        "website-page"
+      ],
+      "status": "verified",
+      "evidence": "reviewed",
+      "tags": [
+        "Frontend",
+        "/journal"
+      ],
+      "id": "journal-page",
+      "kind": "page",
+      "label": "Journal page",
+      "description": "Presents editorial content and an accessible email subscription form.",
+      "moduleId": "newsletter-module",
+      "details": {
+        "notes": [
+          "Input has an accessible label and announced validation errors.",
+          "A pending state prevents duplicate submissions."
+        ]
+      }
+    },
+    {
+      "sourceIds": [
+        "website-journey"
+      ],
+      "status": "implemented",
+      "evidence": "reviewed",
+      "tags": [],
+      "id": "subscribe-journey",
+      "kind": "journey",
+      "label": "Subscribe to updates",
+      "description": "A reader enters an email, the server accepts the signup, and the page announces the next step.",
+      "moduleId": "newsletter-module"
+    },
+    {
+      "sourceIds": [
+        "website-api"
+      ],
+      "status": "implemented",
+      "evidence": "reviewed",
+      "tags": [
+        "POST",
+        "/api/subscriptions"
+      ],
+      "id": "subscribe-api",
+      "kind": "operation",
+      "label": "Subscribe to newsletter",
+      "description": "A public endpoint validates the email and records a pending subscription. Examples use reserved example.invalid addresses.",
+      "moduleId": "newsletter-module",
+      "details": {
+        "endpoint": {
+          "method": "POST",
+          "path": "/api/subscriptions",
+          "authentication": "Public · rate limited by host",
+          "request": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "email"
+              ],
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "format": "email"
+                }
+              }
+            },
+            "example": {
+              "email": "reader@example.invalid"
+            }
+          },
+          "responses": {
+            "202": {
+              "description": "Signup accepted",
+              "example": {
+                "status": "pending-confirmation"
+              }
+            },
+            "400": {
+              "description": "Invalid email",
+              "example": {
+                "code": "INVALID_EMAIL"
+              }
+            },
+            "429": {
+              "description": "Too many requests"
+            }
+          }
+        }
+      }
+    },
+    {
+      "sourceIds": [
+        "website-api"
+      ],
+      "status": "implemented",
+      "evidence": "reviewed",
+      "tags": [
+        "Backend"
+      ],
+      "id": "subscription-service",
+      "kind": "service",
+      "label": "SubscriptionService",
+      "description": "Validates the email, applies duplicate policy, and creates a pending record.",
+      "moduleId": "newsletter-module"
+    },
+    {
+      "sourceIds": [
+        "website-schema"
+      ],
+      "status": "implemented",
+      "evidence": "reviewed",
+      "tags": [],
+      "id": "subscriptions-table",
+      "kind": "table",
+      "label": "subscriptions",
+      "description": "Stores the normalized email and confirmation lifecycle. No real subscriber data is included.",
+      "moduleId": "newsletter-module",
+      "details": {
+        "fields": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primaryKey": true,
+            "required": true
+          },
+          {
+            "name": "email",
+            "type": "varchar(254)",
+            "required": true
+          },
+          {
+            "name": "status",
+            "type": "varchar(32)",
+            "required": true
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "required": true
+          }
+        ]
+      }
+    },
+    {
+      "sourceIds": [
+        "website-page"
+      ],
+      "status": "implemented",
+      "evidence": "reviewed",
+      "tags": [
+        "Visible state"
+      ],
+      "id": "confirmation-state",
+      "kind": "page",
+      "label": "Check your inbox",
+      "description": "An announced success state explains that the reader still needs to confirm their email.",
+      "moduleId": "newsletter-module"
+    },
+    {
+      "sourceIds": [
+        "website-api"
+      ],
+      "status": "implemented",
+      "evidence": "reviewed",
+      "tags": [
+        "Error path"
+      ],
+      "id": "invalid-email",
+      "kind": "entity",
+      "label": "Invalid email response",
+      "description": "HTTP 400 keeps the entered value and asks the reader to correct the address.",
+      "moduleId": "newsletter-module",
+      "details": {
+        "code": "{ \"code\": \"INVALID_EMAIL\" }"
+      }
+    },
+    {
+      "sourceIds": [
+        "website-work"
+      ],
+      "status": "proposed",
+      "evidence": "reviewed",
+      "tags": [],
+      "id": "confirmation-task",
+      "kind": "task",
+      "label": "Verify confirmation delivery",
+      "description": "Add test evidence for delayed or failed confirmation delivery before declaring the journey accepted.",
+      "moduleId": "newsletter-module",
+      "details": {
+        "task": {
+          "state": "todo",
+          "priority": "medium"
+        }
+      }
+    },
+    {
+      "sourceIds": [
+        "website-journey"
+      ],
+      "status": "proposed",
+      "evidence": "reviewed",
+      "tags": [
+        "Hypothetical"
+      ],
+      "id": "website-study",
+      "kind": "topic",
+      "label": "Study: a recoverable form",
+      "description": "A hypothetical exercise follows invalid, pending, accepted, and retry states. It does not claim those behaviors were tested by Context Atlas.",
+      "moduleId": "newsletter-module",
+      "details": {
+        "notes": [
+          "Trace the response code back to the visible page state.",
+          "Which entered values survive a failed submission?",
+          "How would a keyboard user notice the result?"
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "newsletter-module:contains:subscribe-journey",
+      "source": "newsletter-module",
+      "target": "subscribe-journey",
+      "relation": "contains",
+      "sourceIds": [
+        "website-journey"
+      ],
+      "evidence": "reviewed"
+    },
+    {
+      "id": "site-reader:visits:journal-page",
+      "source": "site-reader",
+      "target": "journal-page",
+      "relation": "visits",
+      "sourceIds": [
+        "website-journey"
+      ],
+      "evidence": "reviewed"
+    },
+    {
+      "id": "journal-page:calls:subscribe-api",
+      "source": "journal-page",
+      "target": "subscribe-api",
+      "relation": "calls",
+      "sourceIds": [
+        "website-journey"
+      ],
+      "evidence": "reviewed",
+      "label": "Submit email"
+    },
+    {
+      "id": "subscribe-api:calls:subscription-service",
+      "source": "subscribe-api",
+      "target": "subscription-service",
+      "relation": "calls",
+      "sourceIds": [
+        "website-journey"
+      ],
+      "evidence": "reviewed"
+    },
+    {
+      "id": "subscription-service:writes:subscriptions-table",
+      "source": "subscription-service",
+      "target": "subscriptions-table",
+      "relation": "writes",
+      "sourceIds": [
+        "website-journey"
+      ],
+      "evidence": "reviewed"
+    },
+    {
+      "id": "subscriptions-table:next:confirmation-state",
+      "source": "subscriptions-table",
+      "target": "confirmation-state",
+      "relation": "next",
+      "sourceIds": [
+        "website-journey"
+      ],
+      "evidence": "reviewed",
+      "label": "202 Accepted"
+    },
+    {
+      "id": "subscribe-api:rejects:invalid-email",
+      "source": "subscribe-api",
+      "target": "invalid-email",
+      "relation": "rejects",
+      "sourceIds": [
+        "website-journey"
+      ],
+      "evidence": "reviewed",
+      "label": "400 Invalid email"
+    },
+    {
+      "id": "confirmation-task:documents:confirmation-state",
+      "source": "confirmation-task",
+      "target": "confirmation-state",
+      "relation": "documents",
+      "sourceIds": [
+        "website-journey"
+      ],
+      "evidence": "reviewed"
+    },
+    {
+      "id": "website-study:documents:subscribe-journey",
+      "source": "website-study",
+      "target": "subscribe-journey",
+      "relation": "documents",
+      "sourceIds": [
+        "website-journey"
+      ],
+      "evidence": "reviewed"
+    }
+  ],
+  "views": [
+    {
+      "id": "overview",
+      "kind": "overview",
+      "label": "Project overview",
+      "description": "A website journey that spans frontend, backend, and data.",
+      "nodeIds": [
+        "newsletter-module",
+        "journal-page",
+        "subscribe-api",
+        "subscriptions-table",
+        "confirmation-task"
+      ]
+    },
+    {
+      "id": "subscribe",
+      "kind": "journey",
+      "label": "Subscribe to updates",
+      "description": "Follow a reader signup from page input to the visible confirmation state.",
+      "nodeIds": [
+        "site-reader",
+        "journal-page",
+        "subscribe-api",
+        "subscription-service",
+        "subscriptions-table",
+        "confirmation-state",
+        "invalid-email"
+      ],
+      "steps": [
+        {
+          "nodeId": "site-reader",
+          "label": "Choose to subscribe"
+        },
+        {
+          "nodeId": "journal-page",
+          "label": "Enter an email"
+        },
+        {
+          "nodeId": "subscribe-api",
+          "label": "Submit the form"
+        },
+        {
+          "nodeId": "subscription-service",
+          "label": "Validate the signup"
+        },
+        {
+          "nodeId": "subscriptions-table",
+          "label": "Save a pending record"
+        },
+        {
+          "nodeId": "confirmation-state",
+          "label": "Explain the next step"
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "kind": "architecture",
+      "label": "Page to service",
+      "description": "Understand the page, API, backend service, and persistence boundary.",
+      "nodeIds": [
+        "journal-page",
+        "subscribe-api",
+        "subscription-service",
+        "subscriptions-table",
+        "confirmation-state"
+      ]
+    },
+    {
+      "id": "api",
+      "kind": "api",
+      "label": "API reference",
+      "description": "Inspect the signup input and declared success/error responses.",
+      "nodeIds": [
+        "subscribe-api",
+        "invalid-email"
+      ]
+    },
+    {
+      "id": "data",
+      "kind": "data",
+      "label": "Data model",
+      "description": "Inspect the synthetic subscription schema.",
+      "nodeIds": [
+        "subscriptions-table"
+      ]
+    },
+    {
+      "id": "work",
+      "kind": "work",
+      "label": "Work to verify",
+      "description": "The remaining verification task prevents premature acceptance.",
+      "nodeIds": [
+        "confirmation-task",
+        "confirmation-state"
+      ]
+    },
+    {
+      "id": "study",
+      "kind": "study",
+      "label": "Learning path",
+      "description": "Learn to map request outcomes back to recoverable interface states.",
+      "nodeIds": [
+        "website-study",
+        "journal-page",
+        "subscribe-api",
+        "invalid-email",
+        "confirmation-state"
+      ]
+    }
+  ]
+}

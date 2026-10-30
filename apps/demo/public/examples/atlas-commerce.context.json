@@ -1,0 +1,997 @@
+{
+  "schemaVersion": "1.0",
+  "project": {
+    "id": "atlas-commerce",
+    "name": "Atlas Commerce API",
+    "kind": "api",
+    "version": "demo-v1",
+    "description": "A synthetic order service. Trace a purchase from its consumer through validation, persistence, and a declared API response.",
+    "capabilities": [
+      "overview",
+      "journey",
+      "architecture",
+      "api",
+      "data",
+      "work",
+      "study"
+    ],
+    "tags": [
+      "Synthetic example",
+      "REST API",
+      "Orders",
+      "PostgreSQL"
+    ]
+  },
+  "sources": [
+    {
+      "id": "commerce-journey",
+      "path": "docs/journeys/place-order.md",
+      "label": "Synthetic journey specification",
+      "revision": "demo-v1",
+      "repository": "synthetic/example-project",
+      "freshness": "current"
+    },
+    {
+      "id": "commerce-api",
+      "path": "contracts/openapi.json",
+      "label": "Synthetic OpenAPI contract",
+      "revision": "demo-v1",
+      "repository": "synthetic/example-project",
+      "freshness": "current"
+    },
+    {
+      "id": "commerce-service",
+      "path": "src/orders/OrderService.ts",
+      "label": "Synthetic service implementation",
+      "revision": "demo-v1",
+      "repository": "synthetic/example-project",
+      "freshness": "current"
+    },
+    {
+      "id": "commerce-schema",
+      "path": "migrations/001_orders.sql",
+      "label": "Synthetic database migration",
+      "revision": "demo-v1",
+      "repository": "synthetic/example-project",
+      "freshness": "current"
+    },
+    {
+      "id": "commerce-tests",
+      "path": "test/orders/create-order.test.ts",
+      "label": "Synthetic contract tests",
+      "revision": "demo-v1",
+      "repository": "synthetic/example-project",
+      "freshness": "current"
+    },
+    {
+      "id": "commerce-work",
+      "path": "docs/work/order-reliability.md",
+      "label": "Synthetic work records",
+      "revision": "demo-v1",
+      "repository": "synthetic/example-project",
+      "freshness": "current"
+    },
+    {
+      "id": "commerce-study",
+      "path": "docs/study/order-failure-scenarios.md",
+      "label": "Synthetic learning notes",
+      "revision": "demo-v1",
+      "repository": "synthetic/example-project",
+      "freshness": "stale"
+    }
+  ],
+  "nodes": [
+    {
+      "sourceIds": [
+        "commerce-journey"
+      ],
+      "status": "implemented",
+      "evidence": "reviewed",
+      "tags": [
+        "Core module"
+      ],
+      "id": "orders-module",
+      "kind": "module",
+      "label": "Orders",
+      "description": "Order submission, validation, persistence, and response contracts."
+    },
+    {
+      "sourceIds": [
+        "commerce-journey"
+      ],
+      "status": "implemented",
+      "evidence": "reviewed",
+      "tags": [
+        "Supporting module"
+      ],
+      "id": "catalog-module",
+      "kind": "module",
+      "label": "Catalog",
+      "description": "Product availability used while validating an order."
+    },
+    {
+      "sourceIds": [
+        "commerce-journey"
+      ],
+      "status": "implemented",
+      "evidence": "reviewed",
+      "tags": [
+        "Actor"
+      ],
+      "id": "order-consumer",
+      "kind": "actor",
+      "label": "API consumer",
+      "description": "An authenticated application submits an order. This API-only project has no frontend pages.",
+      "moduleId": "orders-module"
+    },
+    {
+      "sourceIds": [
+        "commerce-journey"
+      ],
+      "status": "implemented",
+      "evidence": "reviewed",
+      "tags": [
+        "Happy path",
+        "Failure path"
+      ],
+      "id": "place-order-journey",
+      "kind": "journey",
+      "label": "Place an order",
+      "description": "Validate a submitted basket, persist the order, and return its identifier. Invalid stock is rejected before a write.",
+      "moduleId": "orders-module"
+    },
+    {
+      "sourceIds": [
+        "commerce-api"
+      ],
+      "status": "verified",
+      "evidence": "reviewed",
+      "tags": [
+        "POST",
+        "/api/orders"
+      ],
+      "id": "create-order",
+      "kind": "operation",
+      "label": "Create an order",
+      "moduleId": "orders-module",
+      "description": "Accepts a customer reference and line items. Returns a created order or a declared validation error. The synthetic test evidence covers the contract, not deployment or UAT.",
+      "details": {
+        "endpoint": {
+          "method": "POST",
+          "path": "/api/orders",
+          "authentication": "Bearer token · orders:create",
+          "request": {
+            "contentType": "application/json",
+            "schema": {
+              "type": "object",
+              "required": [
+                "customerId",
+                "items"
+              ],
+              "properties": {
+                "customerId": {
+                  "type": "string"
+                },
+                "items": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "productId",
+                      "quantity"
+                    ],
+                    "properties": {
+                      "productId": {
+                        "type": "string"
+                      },
+                      "quantity": {
+                        "type": "integer",
+                        "minimum": 1
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "example": {
+              "customerId": "customer-demo-01",
+              "items": [
+                {
+                  "productId": "product-demo-01",
+                  "quantity": 2
+                }
+              ]
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Order created",
+              "schema": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "status"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "const": "created"
+                  }
+                }
+              },
+              "example": {
+                "id": "order-demo-01",
+                "status": "created"
+              }
+            },
+            "400": {
+              "description": "Invalid or empty basket",
+              "example": {
+                "code": "INVALID_ORDER",
+                "message": "At least one valid line item is required."
+              }
+            },
+            "401": {
+              "description": "Authentication required",
+              "example": {
+                "code": "UNAUTHENTICATED"
+              }
+            },
+            "409": {
+              "description": "Insufficient stock",
+              "example": {
+                "code": "INSUFFICIENT_STOCK",
+                "productId": "product-demo-01"
+              }
+            }
+          }
+        },
+        "notes": [
+          "All identifiers and examples are synthetic.",
+          "A verified contract test is not business acceptance or proof of a deployed service."
+        ]
+      }
+    },
+    {
+      "sourceIds": [
+        "commerce-service"
+      ],
+      "status": "verified",
+      "evidence": "reviewed",
+      "tags": [
+        "Validation"
+      ],
+      "id": "validate-order",
+      "kind": "service",
+      "label": "Validate basket",
+      "description": "Checks nonempty line items, positive quantities, and current product availability before persisting anything.",
+      "moduleId": "orders-module",
+      "details": {
+        "notes": [
+          "Reject invalid requests before a database write.",
+          "The check and reservation must share a consistent transaction boundary."
+        ]
+      }
+    },
+    {
+      "sourceIds": [
+        "commerce-service"
+      ],
+      "status": "implemented",
+      "evidence": "reviewed",
+      "tags": [
+        "Application service"
+      ],
+      "id": "order-service",
+      "kind": "service",
+      "label": "OrderService",
+      "description": "Coordinates validation and order creation within a transaction, then maps the persisted record to the public response.",
+      "moduleId": "orders-module",
+      "details": {
+        "code": "async function createOrder(input, actor) {\n  const basket = await validateBasket(input.items);\n  return transaction(async () => {\n    const order = await orders.insert(actor.customerId, basket);\n    return { id: order.id, status: \"created\" };\n  });\n}",
+        "notes": [
+          "Illustrative pseudocode for this synthetic project."
+        ]
+      }
+    },
+    {
+      "sourceIds": [
+        "commerce-schema"
+      ],
+      "status": "implemented",
+      "evidence": "reviewed",
+      "tags": [
+        "PostgreSQL"
+      ],
+      "id": "orders-table",
+      "kind": "table",
+      "label": "orders",
+      "description": "Persists the order header. A separate order_items table preserves the submitted quantities.",
+      "moduleId": "orders-module",
+      "details": {
+        "fields": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "required": true,
+            "primaryKey": true
+          },
+          {
+            "name": "customer_id",
+            "type": "uuid",
+            "required": true
+          },
+          {
+            "name": "status",
+            "type": "varchar(24)",
+            "required": true
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "required": true
+          }
+        ],
+        "notes": [
+          "Database shape is independent of the public response DTO."
+        ]
+      }
+    },
+    {
+      "sourceIds": [
+        "commerce-schema"
+      ],
+      "status": "implemented",
+      "evidence": "reviewed",
+      "tags": [
+        "PostgreSQL"
+      ],
+      "id": "order-items-table",
+      "kind": "table",
+      "label": "order_items",
+      "description": "Links an order to products and retains the requested quantity.",
+      "moduleId": "orders-module",
+      "details": {
+        "fields": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "required": true,
+            "primaryKey": true
+          },
+          {
+            "name": "order_id",
+            "type": "uuid",
+            "required": true,
+            "references": "orders.id"
+          },
+          {
+            "name": "product_id",
+            "type": "uuid",
+            "required": true,
+            "references": "products.id"
+          },
+          {
+            "name": "quantity",
+            "type": "integer",
+            "required": true
+          }
+        ]
+      }
+    },
+    {
+      "sourceIds": [
+        "commerce-api"
+      ],
+      "status": "verified",
+      "evidence": "reviewed",
+      "tags": [
+        "201 Created"
+      ],
+      "id": "created-response",
+      "kind": "entity",
+      "label": "OrderCreated response",
+      "description": "The public response deliberately exposes only an order identifier and lifecycle status.",
+      "moduleId": "orders-module",
+      "details": {
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "status",
+            "type": "\"created\"",
+            "required": true
+          }
+        ]
+      }
+    },
+    {
+      "sourceIds": [
+        "commerce-api",
+        "commerce-tests"
+      ],
+      "status": "verified",
+      "evidence": "reviewed",
+      "tags": [
+        "409 Conflict",
+        "Failure path"
+      ],
+      "id": "stock-conflict",
+      "kind": "entity",
+      "label": "Insufficient stock",
+      "description": "Returns HTTP 409 with a stable error code. No order is committed when availability is insufficient.",
+      "moduleId": "orders-module",
+      "details": {
+        "code": "{\n  \"code\": \"INSUFFICIENT_STOCK\",\n  \"productId\": \"product-demo-01\"\n}"
+      }
+    },
+    {
+      "sourceIds": [
+        "commerce-service"
+      ],
+      "status": "implemented",
+      "evidence": "reviewed",
+      "tags": [
+        "Dependency"
+      ],
+      "id": "catalog-lookup",
+      "kind": "service",
+      "label": "Check availability",
+      "description": "Loads product availability for validation. The concurrent reservation improvement remains a separate open task.",
+      "moduleId": "catalog-module"
+    },
+    {
+      "sourceIds": [
+        "commerce-schema"
+      ],
+      "status": "implemented",
+      "evidence": "reviewed",
+      "tags": [
+        "PostgreSQL"
+      ],
+      "id": "products-table",
+      "kind": "table",
+      "label": "products",
+      "description": "Synthetic product identifiers and available stock. Product schema does not imply an inventory accounting implementation.",
+      "moduleId": "catalog-module",
+      "details": {
+        "fields": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "required": true,
+            "primaryKey": true
+          },
+          {
+            "name": "name",
+            "type": "varchar(160)",
+            "required": true
+          },
+          {
+            "name": "available_quantity",
+            "type": "integer",
+            "required": true
+          }
+        ]
+      }
+    },
+    {
+      "sourceIds": [
+        "commerce-api"
+      ],
+      "status": "implemented",
+      "evidence": "reviewed",
+      "tags": [
+        "GET",
+        "/api/products"
+      ],
+      "id": "list-products",
+      "kind": "operation",
+      "label": "List products",
+      "description": "Provides a cursor-paginated catalog for API consumers.",
+      "moduleId": "catalog-module",
+      "details": {
+        "endpoint": {
+          "method": "GET",
+          "path": "/api/products",
+          "authentication": "Bearer token · catalog:read",
+          "parameters": [
+            {
+              "name": "cursor",
+              "in": "query",
+              "required": false,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 25
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "A page of products",
+              "example": {
+                "items": [
+                  {
+                    "id": "product-demo-01",
+                    "name": "Example notebook"
+                  }
+                ],
+                "nextCursor": null
+              }
+            },
+            "401": {
+              "description": "Authentication required"
+            }
+          }
+        }
+      }
+    },
+    {
+      "sourceIds": [
+        "commerce-tests"
+      ],
+      "status": "verified",
+      "evidence": "reviewed",
+      "tags": [
+        "Contract evidence"
+      ],
+      "id": "order-contract-test",
+      "kind": "test",
+      "label": "Create-order contract tests",
+      "description": "Synthetic test evidence covers HTTP 201, invalid basket, and insufficient stock. Deployment and user acceptance are outside this evidence.",
+      "moduleId": "orders-module",
+      "details": {
+        "notes": [
+          "Creates a valid order: documented pass.",
+          "Empty basket: documented pass.",
+          "Insufficient stock returns 409 and writes no order: documented pass.",
+          "This is example evidence, not a test result produced by Context Atlas."
+        ]
+      }
+    },
+    {
+      "sourceIds": [
+        "commerce-work"
+      ],
+      "status": "proposed",
+      "evidence": "reviewed",
+      "tags": [
+        "Reliability",
+        "Blocker"
+      ],
+      "id": "reservation-task",
+      "kind": "task",
+      "label": "Verify concurrent reservations",
+      "description": "Prove that two concurrent purchases cannot reserve the same remaining unit. Blocked on an agreed reservation contract.",
+      "moduleId": "orders-module",
+      "details": {
+        "task": {
+          "state": "blocked",
+          "priority": "high"
+        },
+        "notes": [
+          "Next: agree the reservation transaction boundary, then add a concurrency test.",
+          "Ownership and task mutations remain with the host project."
+        ]
+      }
+    },
+    {
+      "sourceIds": [
+        "commerce-journey"
+      ],
+      "status": "accepted",
+      "evidence": "reviewed",
+      "tags": [
+        "Architecture decision"
+      ],
+      "id": "transaction-decision",
+      "kind": "decision",
+      "label": "One order transaction",
+      "description": "An agreed synthetic design decision keeps order header and line-item writes atomic. This does not prove the concurrency requirement is satisfied.",
+      "moduleId": "orders-module"
+    },
+    {
+      "sourceIds": [
+        "commerce-study"
+      ],
+      "status": "proposed",
+      "evidence": "inferred",
+      "tags": [
+        "Hypothetical",
+        "Needs review"
+      ],
+      "id": "failure-study",
+      "kind": "topic",
+      "label": "Study: failed order submission",
+      "description": "A hypothetical learning exercise asks what happens when stock changes during checkout. It is not an approved runtime contract or UAT result.",
+      "moduleId": "orders-module",
+      "details": {
+        "notes": [
+          "Start with the 201 path, then locate the 409 branch.",
+          "Question: which writes must roll back after a failed reservation?",
+          "Question: which evidence would prove correctness under concurrency?",
+          "These notes are stale relative to demo-v1 and require an owner review."
+        ]
+      }
+    },
+    {
+      "sourceIds": [
+        "commerce-api"
+      ],
+      "status": "implemented",
+      "evidence": "reviewed",
+      "tags": [
+        "Source of truth"
+      ],
+      "id": "api-contract-document",
+      "kind": "document",
+      "label": "OpenAPI contract",
+      "description": "The declared method, request, response, authentication, and error shapes for this synthetic API."
+    }
+  ],
+  "edges": [
+    {
+      "id": "orders-module:contains:place-order-journey",
+      "source": "orders-module",
+      "target": "place-order-journey",
+      "relation": "contains",
+      "sourceIds": [
+        "commerce-journey"
+      ],
+      "evidence": "reviewed"
+    },
+    {
+      "id": "orders-module:contains:create-order",
+      "source": "orders-module",
+      "target": "create-order",
+      "relation": "contains",
+      "sourceIds": [
+        "commerce-journey"
+      ],
+      "evidence": "reviewed"
+    },
+    {
+      "id": "catalog-module:contains:list-products",
+      "source": "catalog-module",
+      "target": "list-products",
+      "relation": "contains",
+      "sourceIds": [
+        "commerce-journey"
+      ],
+      "evidence": "reviewed"
+    },
+    {
+      "id": "order-consumer:calls:create-order",
+      "source": "order-consumer",
+      "target": "create-order",
+      "relation": "calls",
+      "sourceIds": [
+        "commerce-journey"
+      ],
+      "evidence": "reviewed",
+      "label": "Submit basket"
+    },
+    {
+      "id": "create-order:calls:validate-order",
+      "source": "create-order",
+      "target": "validate-order",
+      "relation": "calls",
+      "sourceIds": [
+        "commerce-service"
+      ],
+      "evidence": "reviewed",
+      "label": "Validate input"
+    },
+    {
+      "id": "validate-order:next:order-service",
+      "source": "validate-order",
+      "target": "order-service",
+      "relation": "next",
+      "sourceIds": [
+        "commerce-service"
+      ],
+      "evidence": "reviewed",
+      "label": "Valid basket"
+    },
+    {
+      "id": "validate-order:rejects:stock-conflict",
+      "source": "validate-order",
+      "target": "stock-conflict",
+      "relation": "rejects",
+      "sourceIds": [
+        "commerce-tests"
+      ],
+      "evidence": "reviewed",
+      "label": "Insufficient stock"
+    },
+    {
+      "id": "validate-order:calls:catalog-lookup",
+      "source": "validate-order",
+      "target": "catalog-lookup",
+      "relation": "calls",
+      "sourceIds": [
+        "commerce-service"
+      ],
+      "evidence": "reviewed"
+    },
+    {
+      "id": "catalog-lookup:reads:products-table",
+      "source": "catalog-lookup",
+      "target": "products-table",
+      "relation": "reads",
+      "sourceIds": [
+        "commerce-service"
+      ],
+      "evidence": "reviewed"
+    },
+    {
+      "id": "order-service:writes:orders-table",
+      "source": "order-service",
+      "target": "orders-table",
+      "relation": "writes",
+      "sourceIds": [
+        "commerce-service"
+      ],
+      "evidence": "reviewed",
+      "label": "Atomic write"
+    },
+    {
+      "id": "order-service:writes:order-items-table",
+      "source": "order-service",
+      "target": "order-items-table",
+      "relation": "writes",
+      "sourceIds": [
+        "commerce-service"
+      ],
+      "evidence": "reviewed"
+    },
+    {
+      "id": "orders-table:returns:created-response",
+      "source": "orders-table",
+      "target": "created-response",
+      "relation": "returns",
+      "sourceIds": [
+        "commerce-api"
+      ],
+      "evidence": "reviewed",
+      "label": "201 Created"
+    },
+    {
+      "id": "order-items-table:references:orders-table",
+      "source": "order-items-table",
+      "target": "orders-table",
+      "relation": "references",
+      "sourceIds": [
+        "commerce-schema"
+      ],
+      "evidence": "reviewed",
+      "label": "order_id"
+    },
+    {
+      "id": "order-items-table:references:products-table",
+      "source": "order-items-table",
+      "target": "products-table",
+      "relation": "references",
+      "sourceIds": [
+        "commerce-schema"
+      ],
+      "evidence": "reviewed",
+      "label": "product_id"
+    },
+    {
+      "id": "list-products:reads:products-table",
+      "source": "list-products",
+      "target": "products-table",
+      "relation": "reads",
+      "sourceIds": [
+        "commerce-service"
+      ],
+      "evidence": "reviewed"
+    },
+    {
+      "id": "order-contract-test:tests:create-order",
+      "source": "order-contract-test",
+      "target": "create-order",
+      "relation": "tests",
+      "sourceIds": [
+        "commerce-tests"
+      ],
+      "evidence": "reviewed"
+    },
+    {
+      "id": "order-contract-test:tests:stock-conflict",
+      "source": "order-contract-test",
+      "target": "stock-conflict",
+      "relation": "tests",
+      "sourceIds": [
+        "commerce-tests"
+      ],
+      "evidence": "reviewed"
+    },
+    {
+      "id": "reservation-task:blocks:catalog-lookup",
+      "source": "reservation-task",
+      "target": "catalog-lookup",
+      "relation": "blocks",
+      "sourceIds": [
+        "commerce-work"
+      ],
+      "evidence": "reviewed"
+    },
+    {
+      "id": "transaction-decision:documents:order-service",
+      "source": "transaction-decision",
+      "target": "order-service",
+      "relation": "documents",
+      "sourceIds": [
+        "commerce-journey"
+      ],
+      "evidence": "reviewed"
+    },
+    {
+      "id": "failure-study:documents:stock-conflict",
+      "source": "failure-study",
+      "target": "stock-conflict",
+      "relation": "documents",
+      "sourceIds": [
+        "commerce-study"
+      ],
+      "evidence": "reviewed"
+    },
+    {
+      "id": "api-contract-document:documents:create-order",
+      "source": "api-contract-document",
+      "target": "create-order",
+      "relation": "documents",
+      "sourceIds": [
+        "commerce-api"
+      ],
+      "evidence": "reviewed"
+    }
+  ],
+  "views": [
+    {
+      "id": "overview",
+      "kind": "overview",
+      "label": "Project overview",
+      "description": "Understand the scope, two modules, and the sources behind this synthetic API.",
+      "nodeIds": [
+        "orders-module",
+        "catalog-module",
+        "place-order-journey",
+        "create-order",
+        "list-products",
+        "orders-table",
+        "products-table",
+        "reservation-task"
+      ]
+    },
+    {
+      "id": "place-order",
+      "kind": "journey",
+      "label": "Place an order",
+      "description": "Follow the normal path from an authenticated consumer to a created order, with a visible stock-conflict branch.",
+      "nodeIds": [
+        "order-consumer",
+        "create-order",
+        "validate-order",
+        "order-service",
+        "orders-table",
+        "created-response",
+        "stock-conflict"
+      ],
+      "steps": [
+        {
+          "nodeId": "order-consumer",
+          "label": "Submit a basket",
+          "description": "The API consumer supplies customer and line-item references."
+        },
+        {
+          "nodeId": "create-order",
+          "label": "Accept the request",
+          "description": "Validate the declared authentication and payload contract."
+        },
+        {
+          "nodeId": "validate-order",
+          "label": "Check the basket",
+          "description": "Reject invalid quantities or insufficient availability."
+        },
+        {
+          "nodeId": "order-service",
+          "label": "Create the order",
+          "description": "Coordinate the transaction and public response mapping."
+        },
+        {
+          "nodeId": "orders-table",
+          "label": "Persist the record",
+          "description": "Write the order header and related line items atomically."
+        },
+        {
+          "nodeId": "created-response",
+          "label": "Return the identifier",
+          "description": "HTTP 201 exposes the new identifier and status."
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "kind": "architecture",
+      "label": "Service architecture",
+      "description": "Inspect the order service and catalog dependency without inventing frontend pages.",
+      "nodeIds": [
+        "create-order",
+        "validate-order",
+        "order-service",
+        "catalog-lookup",
+        "orders-table",
+        "order-items-table",
+        "products-table",
+        "list-products"
+      ]
+    },
+    {
+      "id": "api",
+      "kind": "api",
+      "label": "API reference",
+      "description": "Inspect declared request schemas, parameters, authentication, success responses, and error variants.",
+      "nodeIds": [
+        "create-order",
+        "list-products",
+        "created-response",
+        "stock-conflict"
+      ]
+    },
+    {
+      "id": "data",
+      "kind": "data",
+      "label": "Data model",
+      "description": "Explore synthetic table fields, primary keys, and explicit foreign-key relationships.",
+      "nodeIds": [
+        "orders-table",
+        "order-items-table",
+        "products-table"
+      ]
+    },
+    {
+      "id": "work",
+      "kind": "work",
+      "label": "Work and evidence",
+      "description": "Distinguish an accepted design decision, example test evidence, and a blocked reliability task.",
+      "nodeIds": [
+        "reservation-task",
+        "transaction-decision",
+        "order-contract-test",
+        "catalog-lookup",
+        "create-order"
+      ]
+    },
+    {
+      "id": "study",
+      "kind": "study",
+      "label": "Learning path",
+      "description": "A guided hypothetical failure exercise linked to the actual declared error contract. Study notes need review.",
+      "nodeIds": [
+        "failure-study",
+        "place-order-journey",
+        "create-order",
+        "stock-conflict",
+        "order-contract-test"
+      ]
+    }
+  ]
+}
