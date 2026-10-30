@@ -8,6 +8,8 @@ explorer with host-owned integration points, not an execution engine.
 
 - A framework-neutral, versioned context snapshot with typed nodes, relationships,
   evidence, source revisions, and capability-driven views.
+- A `general` project kind for hosts that do not declare an API, website, full-stack, or
+  learning category; existing project kinds retain their meanings.
 - Runtime validation rejects malformed snapshots, duplicate identities, missing
   references, unsupported versions, and unsafe source paths.
 - A React explorer with navigation, search, module filtering, graph and textual views,

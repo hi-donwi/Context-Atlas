@@ -2,6 +2,7 @@ export type JsonValue = null | boolean | number | string | JsonValue[] | {
     [key: string]: JsonValue;
 };
 export type ViewKind = 'overview' | 'journey' | 'architecture' | 'api' | 'data' | 'work' | 'study';
+export type ProjectKind = 'api' | 'website' | 'full-stack' | 'learning' | 'general';
 export type NodeKind = 'module' | 'actor' | 'journey' | 'page' | 'operation' | 'service' | 'entity' | 'table' | 'task' | 'document' | 'decision' | 'test' | 'topic';
 export type ImplementationStatus = 'proposed' | 'implemented' | 'verified' | 'accepted';
 export type EvidenceStatus = 'declared' | 'inferred' | 'reviewed';
@@ -77,7 +78,7 @@ export interface ContextSnapshot {
         id: string;
         name: string;
         description: string;
-        kind: 'api' | 'website' | 'full-stack' | 'learning';
+        kind: ProjectKind;
         capabilities: ViewKind[];
         tags: string[];
         version: string;

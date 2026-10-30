@@ -50,8 +50,9 @@ a backend, database, account, or API key.
 - **Study:** explanations, scenarios, and open questions linked to actual project objects.
 
 Each project declares its capabilities. An API project does not need fictional pages,
-and a learning project does not need fictional endpoints. Search and module filtering
-help narrow the work surface; a written inspector keeps details readable without
+and a learning project does not need fictional endpoints. Use the `general` project kind
+when the host has context to show but no technical category to claim. Search and module
+filtering help narrow the work surface; a written inspector keeps details readable without
 putting every field on the canvas.
 
 Implementation status, evidence quality, and source freshness are separate. A proposed
