@@ -1,0 +1,13 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { useState } from 'react';
+import { PanelRightClose } from 'lucide-react';
+import { KindIcon } from './icons.js';
+import { InspectorDetails } from './InspectorDetails.js';
+import { InspectorSources } from './InspectorSources.js';
+import { InspectorRelationships } from './InspectorRelationships.js';
+export function Inspector({ node, snapshot, host, onSelect, onClose, }) {
+    const [tab, setTab] = useState('details');
+    const sources = snapshot.sources.filter((source) => node.sourceIds.includes(source.id));
+    const relationships = snapshot.edges.filter((edge) => edge.source === node.id || edge.target === node.id);
+    return (_jsxs("aside", { className: "atlas-inspector", id: "atlas-inspector", "aria-label": "Object inspector", children: [_jsxs("div", { className: "atlas-inspector-top", children: [_jsx("span", { className: "atlas-eyebrow", children: "OBJECT INSPECTOR" }), _jsx("button", { className: "atlas-icon-button", type: "button", "aria-label": "Close inspector", onClick: onClose, children: _jsx(PanelRightClose, { size: 17, "aria-hidden": "true" }) })] }), _jsxs("div", { className: "atlas-inspector-heading", children: [_jsx("span", { className: `atlas-kind-icon kind-${node.kind}`, children: _jsx(KindIcon, { kind: node.kind, size: 22 }) }), _jsx("span", { className: "atlas-kind-label", children: node.kind }), _jsx("h2", { children: node.label }), _jsx("p", { children: node.description }), _jsxs("div", { className: "atlas-inline-badges", children: [_jsx("span", { className: `atlas-status status-${node.status}`, children: node.status }), _jsxs("span", { className: "atlas-badge", children: [node.evidence, " evidence"] })] })] }), _jsx("div", { className: "atlas-inspector-tabs", role: "group", "aria-label": "Inspector sections", children: ['details', 'sources', 'related'].map((item) => (_jsxs("button", { type: "button", "aria-pressed": tab === item, className: tab === item ? 'is-active' : '', onClick: () => setTab(item), children: [item, _jsx("span", { children: item === 'sources' ? sources.length : item === 'related' ? relationships.length : '' })] }, item))) }), _jsxs("div", { className: "atlas-inspector-body", children: [tab === 'details' && (_jsx(InspectorDetails, { node: node, sourceCount: sources.length, relationshipCount: relationships.length, host: host })), tab === 'sources' && _jsx(InspectorSources, { sources: sources, host: host }), tab === 'related' && (_jsx(InspectorRelationships, { nodeId: node.id, relationships: relationships, nodes: snapshot.nodes, onSelect: onSelect }))] })] }));
+}
