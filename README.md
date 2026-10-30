@@ -63,6 +63,10 @@ Import a **Context Snapshot 1.0 JSON** file or an **OpenAPI 3.0/3.1 JSON** docum
 Imports stay in browser memory. The demo does not upload them, fetch remote references,
 execute API requests, or discover files on your machine.
 
+The public GitHub Pages demo is intended for synthetic examples. For private project
+snapshots, run the application from a trusted local checkout and import the file on
+`localhost`; the importer reads the selected JSON in the browser and has no upload path.
+
 The OpenAPI adapter projects declared operations and schemas. It does not infer
 database usage, application services, user journeys, or implementation completion.
 See [integration guidance](docs/integration.md) for adapting other sources.
