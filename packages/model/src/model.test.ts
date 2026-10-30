@@ -3,35 +3,101 @@ import { exportContext, searchNodes, selectNeighborhood, validateSnapshot } from
 import type { ContextNode, ContextSnapshot } from './types.js';
 
 const node = (id: string, overrides: Partial<ContextNode> = {}): ContextNode => ({
-  id, kind: 'service', label: id, description: `Description of ${id}`,
-  sourceIds: ['contract'], status: 'implemented', evidence: 'declared', tags: [], ...overrides,
+  id,
+  kind: 'service',
+  label: id,
+  description: `Description of ${id}`,
+  sourceIds: ['contract'],
+  status: 'implemented',
+  evidence: 'declared',
+  tags: [],
+  ...overrides,
 });
 
 function fixture(): ContextSnapshot {
   return {
     schemaVersion: '1.0',
-    project: { id: 'sample', name: 'Synthetic API', description: 'A synthetic example.', kind: 'api',
-      capabilities: ['overview', 'journey', 'api'], tags: ['synthetic'], version: '1.0' },
+    project: {
+      id: 'sample',
+      name: 'Synthetic API',
+      description: 'A synthetic example.',
+      kind: 'api',
+      capabilities: ['overview', 'journey', 'api'],
+      tags: ['synthetic'],
+      version: '1.0',
+    },
     sources: [
-      { id: 'contract', label: 'Contract', path: 'contracts/openapi.json', revision: 'sample-v1', freshness: 'current' },
-      { id: 'notes', label: 'Restricted notes', path: 'notes/design.md', revision: 'sample-v2', freshness: 'stale' },
+      {
+        id: 'contract',
+        label: 'Contract',
+        path: 'contracts/openapi.json',
+        revision: 'sample-v1',
+        freshness: 'current',
+      },
+      {
+        id: 'notes',
+        label: 'Restricted notes',
+        path: 'notes/design.md',
+        revision: 'sample-v2',
+        freshness: 'stale',
+      },
     ],
     nodes: [
       node('orders', { kind: 'module' }),
-      node('create', { kind: 'operation', moduleId: 'orders', tags: ['checkout'], details: { endpoint: {
-        method: 'POST', path: '/orders', authentication: 'Bearer', request: { orderId: 'example' },
-        responses: { '201': { description: 'Created' }, '400': { description: 'Invalid request' } },
-      }, notes: ['Acceptance remains unknown.'] } }),
+      node('create', {
+        kind: 'operation',
+        moduleId: 'orders',
+        tags: ['checkout'],
+        details: {
+          endpoint: {
+            method: 'POST',
+            path: '/orders',
+            authentication: 'Bearer',
+            request: { orderId: 'example' },
+            responses: {
+              '201': { description: 'Created' },
+              '400': { description: 'Invalid request' },
+            },
+          },
+          notes: ['Acceptance remains unknown.'],
+        },
+      }),
       node('store', { kind: 'table', moduleId: 'orders' }),
-      node('secret', { label: 'Hidden invention', description: 'Never export this text.', sourceIds: ['notes'] }),
+      node('secret', {
+        label: 'Hidden invention',
+        description: 'Never export this text.',
+        sourceIds: ['notes'],
+      }),
       node('unrelated'),
     ],
     edges: [
-      { id: 'write', source: 'create', target: 'store', relation: 'writes', sourceIds: ['contract'], evidence: 'reviewed' },
-      { id: 'inferred', source: 'create', target: 'secret', relation: 'related-to', sourceIds: ['notes'], evidence: 'inferred' },
+      {
+        id: 'write',
+        source: 'create',
+        target: 'store',
+        relation: 'writes',
+        sourceIds: ['contract'],
+        evidence: 'reviewed',
+      },
+      {
+        id: 'inferred',
+        source: 'create',
+        target: 'secret',
+        relation: 'related-to',
+        sourceIds: ['notes'],
+        evidence: 'inferred',
+      },
     ],
-    views: [{ id: 'checkout', kind: 'journey', label: 'Private journey label', description: 'Hidden journey narrative.',
-      nodeIds: ['create', 'store', 'secret'], steps: [{ nodeId: 'secret', label: 'Secret step narrative' }] }],
+    views: [
+      {
+        id: 'checkout',
+        kind: 'journey',
+        label: 'Private journey label',
+        description: 'Hidden journey narrative.',
+        nodeIds: ['create', 'store', 'secret'],
+        steps: [{ nodeId: 'secret', label: 'Secret step narrative' }],
+      },
+    ],
   };
 }
 
@@ -41,28 +107,47 @@ describe('snapshot validation', () => {
     expect(validateSnapshot(value)).toEqual({ success: true, snapshot: value });
   });
 
-  it.each([null, [], {}, { schemaVersion: '2.0' }, { ...fixture(), unknown: true }])('rejects malformed snapshots', (value) => {
-    expect(validateSnapshot(value).success).toBe(false);
-  });
+  it.each([null, [], {}, { schemaVersion: '2.0' }, { ...fixture(), unknown: true }])(
+    'rejects malformed snapshots',
+    (value) => {
+      expect(validateSnapshot(value).success).toBe(false);
+    },
+  );
 
   it('rejects unknown details and invalid field types', () => {
     const value = fixture();
-    expect(validateSnapshot({ ...value, nodes: [{ ...value.nodes[0], details: { surprise: true } }] }).success).toBe(false);
-    expect(validateSnapshot({ ...value, nodes: [{ ...value.nodes[0], sourceIds: 42 }] }).success).toBe(false);
+    expect(
+      validateSnapshot({ ...value, nodes: [{ ...value.nodes[0], details: { surprise: true } }] })
+        .success,
+    ).toBe(false);
+    expect(
+      validateSnapshot({ ...value, nodes: [{ ...value.nodes[0], sourceIds: 42 }] }).success,
+    ).toBe(false);
   });
 
-  it.each(['/etc/passwd', '../secret.md', 'docs/../../secret.md', 'C:\\secret.md', 'https://example.test/a', 'docs\\secret.md', 'docs/%2e%2e/secret.md'])('rejects unsafe source paths: %s', (path) => {
+  it.each([
+    '/etc/passwd',
+    '../secret.md',
+    'docs/../../secret.md',
+    'C:\\secret.md',
+    'https://example.test/a',
+    'docs\\secret.md',
+    'docs/%2e%2e/secret.md',
+  ])('rejects unsafe source paths: %s', (path) => {
     const value = fixture();
     value.sources[0]!.path = path;
     expect(validateSnapshot(value).success).toBe(false);
   });
 
-  it.each(['nodes', 'sources', 'edges', 'views'] as const)('rejects duplicate %s identities', (kind) => {
-    const value = fixture();
-    const first = value[kind][0]!;
-    const invalid = { ...value, [kind]: [...value[kind], first] };
-    expect(validateSnapshot(invalid).success).toBe(false);
-  });
+  it.each(['nodes', 'sources', 'edges', 'views'] as const)(
+    'rejects duplicate %s identities',
+    (kind) => {
+      const value = fixture();
+      const first = value[kind][0]!;
+      const invalid = { ...value, [kind]: [...value[kind], first] };
+      expect(validateSnapshot(invalid).success).toBe(false);
+    },
+  );
 
   it('reports missing node, source, module, and view references', () => {
     const value = fixture();
@@ -123,7 +208,11 @@ describe('bounded graph selection', () => {
 
 describe('source-allowlisted context export', () => {
   it('exports a valid snapshot without disallowed facts or view narratives', () => {
-    const packet = exportContext(fixture(), { nodeIds: ['create'], allowedSourceIds: ['contract'], objective: 'Review this operation' });
+    const packet = exportContext(fixture(), {
+      nodeIds: ['create'],
+      allowedSourceIds: ['contract'],
+      objective: 'Review this operation',
+    });
     const serialized = JSON.stringify(packet);
     expect(packet.nodeIds).toEqual(['orders', 'create', 'store']);
     expect(packet.snapshot.sources.map((source) => source.id)).toEqual(['contract']);
@@ -141,22 +230,34 @@ describe('source-allowlisted context export', () => {
   });
 
   it('rejects selected facts outside the explicit source allowlist', () => {
-    expect(() => exportContext(fixture(), { nodeIds: ['secret'], allowedSourceIds: ['contract'] })).toThrow(/allowed|source/i);
-    expect(() => exportContext(fixture(), { nodeIds: ['create'], allowedSourceIds: [] })).toThrow(/allowed|source/i);
-    expect(() => exportContext(fixture(), { nodeIds: ['create'], allowedSourceIds: ['missing'] })).toThrow(/unknown/i);
+    expect(() =>
+      exportContext(fixture(), { nodeIds: ['secret'], allowedSourceIds: ['contract'] }),
+    ).toThrow(/allowed|source/i);
+    expect(() => exportContext(fixture(), { nodeIds: ['create'], allowedSourceIds: [] })).toThrow(
+      /allowed|source/i,
+    );
+    expect(() =>
+      exportContext(fixture(), { nodeIds: ['create'], allowedSourceIds: ['missing'] }),
+    ).toThrow(/unknown/i);
   });
 
   it('does not export an edge whose own evidence source is excluded', () => {
     const value = fixture();
     value.edges[0]!.sourceIds = ['notes'];
-    const packet = exportContext(value, { nodeIds: ['create', 'store'], allowedSourceIds: ['contract'], depth: 0 });
+    const packet = exportContext(value, {
+      nodeIds: ['create', 'store'],
+      allowedSourceIds: ['contract'],
+      depth: 0,
+    });
     expect(packet.snapshot.edges).toEqual([]);
   });
 
   it('rejects an allowed child when its required module evidence is excluded', () => {
     const value = fixture();
     value.nodes[0]!.sourceIds = ['notes'];
-    expect(() => exportContext(value, { nodeIds: ['create'], allowedSourceIds: ['contract'] })).toThrow(/allowed|source/i);
+    expect(() =>
+      exportContext(value, { nodeIds: ['create'], allowedSourceIds: ['contract'] }),
+    ).toThrow(/allowed|source/i);
   });
 
   it('is deterministic and does not modify the imported snapshot', () => {
@@ -171,7 +272,9 @@ describe('source-allowlisted context export', () => {
 describe('search', () => {
   it('matches labels, tags, and endpoint paths without losing module scope', () => {
     expect(searchNodes(fixture(), 'CHECKOUT').map((entry) => entry.id)).toEqual(['create']);
-    expect(searchNodes(fixture(), '/orders', 'orders').map((entry) => entry.id)).toEqual(['create']);
+    expect(searchNodes(fixture(), '/orders', 'orders').map((entry) => entry.id)).toEqual([
+      'create',
+    ]);
     expect(searchNodes(fixture(), 'unrelated', 'orders')).toEqual([]);
     expect(searchNodes(fixture(), 'no matching entry')).toEqual([]);
   });

@@ -6,20 +6,8 @@
     "kind": "website",
     "version": "demo-v1",
     "description": "A synthetic editorial website. Connect a reader journey to its page, form, API contract, service, and stored subscription.",
-    "capabilities": [
-      "overview",
-      "journey",
-      "architecture",
-      "api",
-      "data",
-      "work",
-      "study"
-    ],
-    "tags": [
-      "Synthetic example",
-      "Website",
-      "Newsletter"
-    ]
+    "capabilities": ["overview", "journey", "architecture", "api", "data", "work", "study"],
+    "tags": ["Synthetic example", "Website", "Newsletter"]
   },
   "sources": [
     {
@@ -65,9 +53,7 @@
   ],
   "nodes": [
     {
-      "sourceIds": [
-        "website-journey"
-      ],
+      "sourceIds": ["website-journey"],
       "status": "implemented",
       "evidence": "reviewed",
       "tags": [],
@@ -77,9 +63,7 @@
       "description": "Reader signup, confirmation, and subscription records."
     },
     {
-      "sourceIds": [
-        "website-journey"
-      ],
+      "sourceIds": ["website-journey"],
       "status": "implemented",
       "evidence": "reviewed",
       "tags": [],
@@ -90,15 +74,10 @@
       "moduleId": "newsletter-module"
     },
     {
-      "sourceIds": [
-        "website-page"
-      ],
+      "sourceIds": ["website-page"],
       "status": "verified",
       "evidence": "reviewed",
-      "tags": [
-        "Frontend",
-        "/journal"
-      ],
+      "tags": ["Frontend", "/journal"],
       "id": "journal-page",
       "kind": "page",
       "label": "Journal page",
@@ -112,9 +91,7 @@
       }
     },
     {
-      "sourceIds": [
-        "website-journey"
-      ],
+      "sourceIds": ["website-journey"],
       "status": "implemented",
       "evidence": "reviewed",
       "tags": [],
@@ -125,15 +102,10 @@
       "moduleId": "newsletter-module"
     },
     {
-      "sourceIds": [
-        "website-api"
-      ],
+      "sourceIds": ["website-api"],
       "status": "implemented",
       "evidence": "reviewed",
-      "tags": [
-        "POST",
-        "/api/subscriptions"
-      ],
+      "tags": ["POST", "/api/subscriptions"],
       "id": "subscribe-api",
       "kind": "operation",
       "label": "Subscribe to newsletter",
@@ -147,9 +119,7 @@
           "request": {
             "schema": {
               "type": "object",
-              "required": [
-                "email"
-              ],
+              "required": ["email"],
               "properties": {
                 "email": {
                   "type": "string",
@@ -182,14 +152,10 @@
       }
     },
     {
-      "sourceIds": [
-        "website-api"
-      ],
+      "sourceIds": ["website-api"],
       "status": "implemented",
       "evidence": "reviewed",
-      "tags": [
-        "Backend"
-      ],
+      "tags": ["Backend"],
       "id": "subscription-service",
       "kind": "service",
       "label": "SubscriptionService",
@@ -197,9 +163,7 @@
       "moduleId": "newsletter-module"
     },
     {
-      "sourceIds": [
-        "website-schema"
-      ],
+      "sourceIds": ["website-schema"],
       "status": "implemented",
       "evidence": "reviewed",
       "tags": [],
@@ -235,14 +199,10 @@
       }
     },
     {
-      "sourceIds": [
-        "website-page"
-      ],
+      "sourceIds": ["website-page"],
       "status": "implemented",
       "evidence": "reviewed",
-      "tags": [
-        "Visible state"
-      ],
+      "tags": ["Visible state"],
       "id": "confirmation-state",
       "kind": "page",
       "label": "Check your inbox",
@@ -250,14 +210,10 @@
       "moduleId": "newsletter-module"
     },
     {
-      "sourceIds": [
-        "website-api"
-      ],
+      "sourceIds": ["website-api"],
       "status": "implemented",
       "evidence": "reviewed",
-      "tags": [
-        "Error path"
-      ],
+      "tags": ["Error path"],
       "id": "invalid-email",
       "kind": "entity",
       "label": "Invalid email response",
@@ -268,9 +224,7 @@
       }
     },
     {
-      "sourceIds": [
-        "website-work"
-      ],
+      "sourceIds": ["website-work"],
       "status": "proposed",
       "evidence": "reviewed",
       "tags": [],
@@ -287,14 +241,10 @@
       }
     },
     {
-      "sourceIds": [
-        "website-journey"
-      ],
+      "sourceIds": ["website-journey"],
       "status": "proposed",
       "evidence": "reviewed",
-      "tags": [
-        "Hypothetical"
-      ],
+      "tags": ["Hypothetical"],
       "id": "website-study",
       "kind": "topic",
       "label": "Study: a recoverable form",
@@ -315,9 +265,7 @@
       "source": "newsletter-module",
       "target": "subscribe-journey",
       "relation": "contains",
-      "sourceIds": [
-        "website-journey"
-      ],
+      "sourceIds": ["website-journey"],
       "evidence": "reviewed"
     },
     {
@@ -325,9 +273,7 @@
       "source": "site-reader",
       "target": "journal-page",
       "relation": "visits",
-      "sourceIds": [
-        "website-journey"
-      ],
+      "sourceIds": ["website-journey"],
       "evidence": "reviewed"
     },
     {
@@ -335,9 +281,7 @@
       "source": "journal-page",
       "target": "subscribe-api",
       "relation": "calls",
-      "sourceIds": [
-        "website-journey"
-      ],
+      "sourceIds": ["website-journey"],
       "evidence": "reviewed",
       "label": "Submit email"
     },
@@ -346,9 +290,7 @@
       "source": "subscribe-api",
       "target": "subscription-service",
       "relation": "calls",
-      "sourceIds": [
-        "website-journey"
-      ],
+      "sourceIds": ["website-journey"],
       "evidence": "reviewed"
     },
     {
@@ -356,9 +298,7 @@
       "source": "subscription-service",
       "target": "subscriptions-table",
       "relation": "writes",
-      "sourceIds": [
-        "website-journey"
-      ],
+      "sourceIds": ["website-journey"],
       "evidence": "reviewed"
     },
     {
@@ -366,9 +306,7 @@
       "source": "subscriptions-table",
       "target": "confirmation-state",
       "relation": "next",
-      "sourceIds": [
-        "website-journey"
-      ],
+      "sourceIds": ["website-journey"],
       "evidence": "reviewed",
       "label": "202 Accepted"
     },
@@ -377,9 +315,7 @@
       "source": "subscribe-api",
       "target": "invalid-email",
       "relation": "rejects",
-      "sourceIds": [
-        "website-journey"
-      ],
+      "sourceIds": ["website-journey"],
       "evidence": "reviewed",
       "label": "400 Invalid email"
     },
@@ -388,9 +324,7 @@
       "source": "confirmation-task",
       "target": "confirmation-state",
       "relation": "documents",
-      "sourceIds": [
-        "website-journey"
-      ],
+      "sourceIds": ["website-journey"],
       "evidence": "reviewed"
     },
     {
@@ -398,9 +332,7 @@
       "source": "website-study",
       "target": "subscribe-journey",
       "relation": "documents",
-      "sourceIds": [
-        "website-journey"
-      ],
+      "sourceIds": ["website-journey"],
       "evidence": "reviewed"
     }
   ],
@@ -477,29 +409,21 @@
       "kind": "api",
       "label": "API reference",
       "description": "Inspect the signup input and declared success/error responses.",
-      "nodeIds": [
-        "subscribe-api",
-        "invalid-email"
-      ]
+      "nodeIds": ["subscribe-api", "invalid-email"]
     },
     {
       "id": "data",
       "kind": "data",
       "label": "Data model",
       "description": "Inspect the synthetic subscription schema.",
-      "nodeIds": [
-        "subscriptions-table"
-      ]
+      "nodeIds": ["subscriptions-table"]
     },
     {
       "id": "work",
       "kind": "work",
       "label": "Work to verify",
       "description": "The remaining verification task prevents premature acceptance.",
-      "nodeIds": [
-        "confirmation-task",
-        "confirmation-state"
-      ]
+      "nodeIds": ["confirmation-task", "confirmation-state"]
     },
     {
       "id": "study",

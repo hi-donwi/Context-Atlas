@@ -25,13 +25,13 @@ without replacing the source's ownership or validation rules.
 
 ## Modules
 
-| Module | Owns | Does not own |
-| --- | --- | --- |
-| Model | Versioned types, validation, IDs, references, graph selection, export | React, filesystem access, source writes |
-| OpenAPI adapter | Declared API operations and schemas | Remote reference fetching, runtime discovery, business intent |
-| Viewer | Navigation, canvas, inspector, filters, context actions | Authorization, task mutation, compilation, API execution |
-| Demo | Synthetic projects, local browser import, presentation shell | Production project context or integration credentials |
-| Host integration | Authorized snapshot loading, references, edit validation | Reinterpretation of imported facts as executable logic |
+| Module           | Owns                                                                  | Does not own                                                  |
+| ---------------- | --------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Model            | Versioned types, validation, IDs, references, graph selection, export | React, filesystem access, source writes                       |
+| OpenAPI adapter  | Declared API operations and schemas                                   | Remote reference fetching, runtime discovery, business intent |
+| Viewer           | Navigation, canvas, inspector, filters, context actions               | Authorization, task mutation, compilation, API execution      |
+| Demo             | Synthetic projects, local browser import, presentation shell          | Production project context or integration credentials         |
+| Host integration | Authorized snapshot loading, references, edit validation              | Reinterpretation of imported facts as executable logic        |
 
 Dependencies point from adapters and the viewer toward the model. The model remains
 framework-neutral. Host-specific adapters belong with their hosts when they need

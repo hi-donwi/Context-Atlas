@@ -3,11 +3,20 @@
   "version": "0.1.0",
   "type": "module",
   "license": "MIT",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
     "./schema": "./dist/context-snapshot.schema.json"
   },
-  "scripts": { "build": "tsc -p tsconfig.json" },
-  "dependencies": { "ajv": "8.20.0" }
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "ajv": "8.20.0"
+  }
 }

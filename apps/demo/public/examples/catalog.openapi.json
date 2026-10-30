@@ -15,9 +15,7 @@
       "get": {
         "operationId": "listProducts",
         "summary": "List products",
-        "tags": [
-          "Catalog"
-        ],
+        "tags": ["Catalog"],
         "parameters": [
           {
             "name": "limit",
@@ -57,9 +55,7 @@
       "post": {
         "operationId": "createProduct",
         "summary": "Create a product",
-        "tags": [
-          "Catalog"
-        ],
+        "tags": ["Catalog"],
         "requestBody": {
           "required": true,
           "content": {
@@ -98,10 +94,7 @@
     "schemas": {
       "Product": {
         "type": "object",
-        "required": [
-          "id",
-          "name"
-        ],
+        "required": ["id", "name"],
         "properties": {
           "id": {
             "type": "string",
@@ -114,9 +107,7 @@
       },
       "ProductInput": {
         "type": "object",
-        "required": [
-          "name"
-        ],
+        "required": ["name"],
         "properties": {
           "name": {
             "type": "string",

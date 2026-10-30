@@ -8,5 +8,12 @@
       "@context-atlas/viewer": ["./packages/viewer/src/index.ts"]
     }
   },
-  "include": ["packages/**/*.ts", "packages/**/*.tsx", "apps/**/*.ts", "apps/**/*.tsx", "e2e/**/*.ts", "*.ts"]
+  "include": [
+    "packages/**/*.ts",
+    "packages/**/*.tsx",
+    "apps/**/*.ts",
+    "apps/**/*.tsx",
+    "e2e/**/*.ts",
+    "*.ts"
+  ]
 }

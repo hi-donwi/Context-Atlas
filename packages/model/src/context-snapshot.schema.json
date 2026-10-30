@@ -22,25 +22,12 @@
           "type": "string"
         },
         "kind": {
-          "enum": [
-            "api",
-            "website",
-            "full-stack",
-            "learning"
-          ]
+          "enum": ["api", "website", "full-stack", "learning"]
         },
         "capabilities": {
           "type": "array",
           "items": {
-            "enum": [
-              "overview",
-              "journey",
-              "architecture",
-              "api",
-              "data",
-              "work",
-              "study"
-            ]
+            "enum": ["overview", "journey", "architecture", "api", "data", "work", "study"]
           },
           "uniqueItems": true
         },
@@ -57,15 +44,7 @@
           "minLength": 1
         }
       },
-      "required": [
-        "id",
-        "name",
-        "description",
-        "kind",
-        "capabilities",
-        "tags",
-        "version"
-      ],
+      "required": ["id", "name", "description", "kind", "capabilities", "tags", "version"],
       "additionalProperties": false
     },
     "sources": {
@@ -94,20 +73,10 @@
             "minLength": 1
           },
           "freshness": {
-            "enum": [
-              "current",
-              "stale",
-              "unknown"
-            ]
+            "enum": ["current", "stale", "unknown"]
           }
         },
-        "required": [
-          "id",
-          "label",
-          "path",
-          "revision",
-          "freshness"
-        ],
+        "required": ["id", "label", "path", "revision", "freshness"],
         "additionalProperties": false
       }
     },
@@ -157,19 +126,10 @@
             "uniqueItems": true
           },
           "status": {
-            "enum": [
-              "proposed",
-              "implemented",
-              "verified",
-              "accepted"
-            ]
+            "enum": ["proposed", "implemented", "verified", "accepted"]
           },
           "evidence": {
-            "enum": [
-              "declared",
-              "inferred",
-              "reviewed"
-            ]
+            "enum": ["declared", "inferred", "reviewed"]
           },
           "tags": {
             "type": "array",
@@ -209,12 +169,7 @@
                     "$ref": "#/$defs/json"
                   }
                 },
-                "required": [
-                  "method",
-                  "path",
-                  "authentication",
-                  "responses"
-                ],
+                "required": ["method", "path", "authentication", "responses"],
                 "additionalProperties": false
               },
               "fields": {
@@ -244,10 +199,7 @@
                       "minLength": 1
                     }
                   },
-                  "required": [
-                    "name",
-                    "type"
-                  ],
+                  "required": ["name", "type"],
                   "additionalProperties": false
                 }
               },
@@ -264,25 +216,13 @@
                 "type": "object",
                 "properties": {
                   "state": {
-                    "enum": [
-                      "todo",
-                      "in-progress",
-                      "blocked",
-                      "done"
-                    ]
+                    "enum": ["todo", "in-progress", "blocked", "done"]
                   },
                   "priority": {
-                    "enum": [
-                      "low",
-                      "medium",
-                      "high"
-                    ]
+                    "enum": ["low", "medium", "high"]
                   }
                 },
-                "required": [
-                  "state",
-                  "priority"
-                ],
+                "required": ["state", "priority"],
                 "additionalProperties": false
               }
             },
@@ -336,21 +276,10 @@
             "uniqueItems": true
           },
           "evidence": {
-            "enum": [
-              "declared",
-              "inferred",
-              "reviewed"
-            ]
+            "enum": ["declared", "inferred", "reviewed"]
           }
         },
-        "required": [
-          "id",
-          "source",
-          "target",
-          "relation",
-          "sourceIds",
-          "evidence"
-        ],
+        "required": ["id", "source", "target", "relation", "sourceIds", "evidence"],
         "additionalProperties": false
       }
     },
@@ -364,15 +293,7 @@
             "minLength": 1
           },
           "kind": {
-            "enum": [
-              "overview",
-              "journey",
-              "architecture",
-              "api",
-              "data",
-              "work",
-              "study"
-            ]
+            "enum": ["overview", "journey", "architecture", "api", "data", "work", "study"]
           },
           "label": {
             "type": "string",
@@ -406,33 +327,17 @@
                   "type": "string"
                 }
               },
-              "required": [
-                "nodeId",
-                "label"
-              ],
+              "required": ["nodeId", "label"],
               "additionalProperties": false
             }
           }
         },
-        "required": [
-          "id",
-          "kind",
-          "label",
-          "description",
-          "nodeIds"
-        ],
+        "required": ["id", "kind", "label", "description", "nodeIds"],
         "additionalProperties": false
       }
     }
   },
-  "required": [
-    "schemaVersion",
-    "project",
-    "sources",
-    "nodes",
-    "edges",
-    "views"
-  ],
+  "required": ["schemaVersion", "project", "sources", "nodes", "edges", "views"],
   "additionalProperties": false,
   "$defs": {
     "json": {

@@ -66,12 +66,12 @@ the viewer. The allowlist is a selection mechanism, not an authorization system.
 
 ## Packages
 
-| Package | Responsibility |
-| --- | --- |
-| `@context-atlas/model` | Snapshot types, runtime validation, graph selection, context export |
-| `@context-atlas/adapter-openapi` | OpenAPI JSON to declared context facts |
-| `@context-atlas/viewer` | Embeddable React navigation, graph, inspector, and context actions |
-| `@context-atlas/demo` | Synthetic projects and local file import |
+| Package                          | Responsibility                                                      |
+| -------------------------------- | ------------------------------------------------------------------- |
+| `@context-atlas/model`           | Snapshot types, runtime validation, graph selection, context export |
+| `@context-atlas/adapter-openapi` | OpenAPI JSON to declared context facts                              |
+| `@context-atlas/viewer`          | Embeddable React navigation, graph, inspector, and context actions  |
+| `@context-atlas/demo`            | Synthetic projects and local file import                            |
 
 These packages are developed together as npm workspaces. This repository does not yet
 provide published npm releases.

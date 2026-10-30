@@ -42,10 +42,10 @@ authorizes the input and scope; an in-memory filter is not an authorization boun
 
 ## Alternatives
 
-| Alternative | Reason rejected |
-| --- | --- |
-| Require one application compiler for all projects | Couples documentation users to unrelated runtime semantics |
-| Store API, task, and workflow state in the canvas | Creates duplicate authorities and conflicting write rules |
+| Alternative                                        | Reason rejected                                                          |
+| -------------------------------------------------- | ------------------------------------------------------------------------ |
+| Require one application compiler for all projects  | Couples documentation users to unrelated runtime semantics               |
+| Store API, task, and workflow state in the canvas  | Creates duplicate authorities and conflicting write rules                |
 | Reconstruct all journeys automatically from source | Cannot establish business intent or acceptance from implementation alone |
-| Use an untyped mind map as the contract | Cannot reliably validate references, evidence, or regeneration |
-| Make edit callbacks write sources directly | Bypasses host ownership, revision checks, and domain validation |
+| Use an untyped mind map as the contract            | Cannot reliably validate references, evidence, or regeneration           |
+| Make edit callbacks write sources directly         | Bypasses host ownership, revision checks, and domain validation          |

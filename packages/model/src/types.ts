@@ -1,6 +1,20 @@
-export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
+export type JsonValue =
+  null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 export type ViewKind = 'overview' | 'journey' | 'architecture' | 'api' | 'data' | 'work' | 'study';
-export type NodeKind = 'module' | 'actor' | 'journey' | 'page' | 'operation' | 'service' | 'entity' | 'table' | 'task' | 'document' | 'decision' | 'test' | 'topic';
+export type NodeKind =
+  | 'module'
+  | 'actor'
+  | 'journey'
+  | 'page'
+  | 'operation'
+  | 'service'
+  | 'entity'
+  | 'table'
+  | 'task'
+  | 'document'
+  | 'decision'
+  | 'test'
+  | 'topic';
 export type ImplementationStatus = 'proposed' | 'implemented' | 'verified' | 'accepted';
 export type EvidenceStatus = 'declared' | 'inferred' | 'reviewed';
 
@@ -46,7 +60,10 @@ export interface ContextNode {
     fields?: DataField[];
     notes?: string[];
     code?: string;
-    task?: { state: 'todo' | 'in-progress' | 'blocked' | 'done'; priority: 'low' | 'medium' | 'high' };
+    task?: {
+      state: 'todo' | 'in-progress' | 'blocked' | 'done';
+      priority: 'low' | 'medium' | 'high';
+    };
   };
 }
 
@@ -86,8 +103,12 @@ export interface ContextSnapshot {
   views: ContextView[];
 }
 
-export interface ValidationIssue { path: string; message: string }
-export type ValidationResult = { success: true; snapshot: ContextSnapshot } | { success: false; issues: ValidationIssue[] };
+export interface ValidationIssue {
+  path: string;
+  message: string;
+}
+export type ValidationResult =
+  { success: true; snapshot: ContextSnapshot } | { success: false; issues: ValidationIssue[] };
 
 export interface ContextExportOptions {
   nodeIds: readonly string[];

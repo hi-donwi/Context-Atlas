@@ -6,21 +6,8 @@
     "kind": "api",
     "version": "demo-v1",
     "description": "A synthetic order service. Trace a purchase from its consumer through validation, persistence, and a declared API response.",
-    "capabilities": [
-      "overview",
-      "journey",
-      "architecture",
-      "api",
-      "data",
-      "work",
-      "study"
-    ],
-    "tags": [
-      "Synthetic example",
-      "REST API",
-      "Orders",
-      "PostgreSQL"
-    ]
+    "capabilities": ["overview", "journey", "architecture", "api", "data", "work", "study"],
+    "tags": ["Synthetic example", "REST API", "Orders", "PostgreSQL"]
   },
   "sources": [
     {
@@ -82,42 +69,30 @@
   ],
   "nodes": [
     {
-      "sourceIds": [
-        "commerce-journey"
-      ],
+      "sourceIds": ["commerce-journey"],
       "status": "implemented",
       "evidence": "reviewed",
-      "tags": [
-        "Core module"
-      ],
+      "tags": ["Core module"],
       "id": "orders-module",
       "kind": "module",
       "label": "Orders",
       "description": "Order submission, validation, persistence, and response contracts."
     },
     {
-      "sourceIds": [
-        "commerce-journey"
-      ],
+      "sourceIds": ["commerce-journey"],
       "status": "implemented",
       "evidence": "reviewed",
-      "tags": [
-        "Supporting module"
-      ],
+      "tags": ["Supporting module"],
       "id": "catalog-module",
       "kind": "module",
       "label": "Catalog",
       "description": "Product availability used while validating an order."
     },
     {
-      "sourceIds": [
-        "commerce-journey"
-      ],
+      "sourceIds": ["commerce-journey"],
       "status": "implemented",
       "evidence": "reviewed",
-      "tags": [
-        "Actor"
-      ],
+      "tags": ["Actor"],
       "id": "order-consumer",
       "kind": "actor",
       "label": "API consumer",
@@ -125,15 +100,10 @@
       "moduleId": "orders-module"
     },
     {
-      "sourceIds": [
-        "commerce-journey"
-      ],
+      "sourceIds": ["commerce-journey"],
       "status": "implemented",
       "evidence": "reviewed",
-      "tags": [
-        "Happy path",
-        "Failure path"
-      ],
+      "tags": ["Happy path", "Failure path"],
       "id": "place-order-journey",
       "kind": "journey",
       "label": "Place an order",
@@ -141,15 +111,10 @@
       "moduleId": "orders-module"
     },
     {
-      "sourceIds": [
-        "commerce-api"
-      ],
+      "sourceIds": ["commerce-api"],
       "status": "verified",
       "evidence": "reviewed",
-      "tags": [
-        "POST",
-        "/api/orders"
-      ],
+      "tags": ["POST", "/api/orders"],
       "id": "create-order",
       "kind": "operation",
       "label": "Create an order",
@@ -164,10 +129,7 @@
             "contentType": "application/json",
             "schema": {
               "type": "object",
-              "required": [
-                "customerId",
-                "items"
-              ],
+              "required": ["customerId", "items"],
               "properties": {
                 "customerId": {
                   "type": "string"
@@ -177,10 +139,7 @@
                   "minItems": 1,
                   "items": {
                     "type": "object",
-                    "required": [
-                      "productId",
-                      "quantity"
-                    ],
+                    "required": ["productId", "quantity"],
                     "properties": {
                       "productId": {
                         "type": "string"
@@ -209,10 +168,7 @@
               "description": "Order created",
               "schema": {
                 "type": "object",
-                "required": [
-                  "id",
-                  "status"
-                ],
+                "required": ["id", "status"],
                 "properties": {
                   "id": {
                     "type": "string"
@@ -256,14 +212,10 @@
       }
     },
     {
-      "sourceIds": [
-        "commerce-service"
-      ],
+      "sourceIds": ["commerce-service"],
       "status": "verified",
       "evidence": "reviewed",
-      "tags": [
-        "Validation"
-      ],
+      "tags": ["Validation"],
       "id": "validate-order",
       "kind": "service",
       "label": "Validate basket",
@@ -277,14 +229,10 @@
       }
     },
     {
-      "sourceIds": [
-        "commerce-service"
-      ],
+      "sourceIds": ["commerce-service"],
       "status": "implemented",
       "evidence": "reviewed",
-      "tags": [
-        "Application service"
-      ],
+      "tags": ["Application service"],
       "id": "order-service",
       "kind": "service",
       "label": "OrderService",
@@ -292,20 +240,14 @@
       "moduleId": "orders-module",
       "details": {
         "code": "async function createOrder(input, actor) {\n  const basket = await validateBasket(input.items);\n  return transaction(async () => {\n    const order = await orders.insert(actor.customerId, basket);\n    return { id: order.id, status: \"created\" };\n  });\n}",
-        "notes": [
-          "Illustrative pseudocode for this synthetic project."
-        ]
+        "notes": ["Illustrative pseudocode for this synthetic project."]
       }
     },
     {
-      "sourceIds": [
-        "commerce-schema"
-      ],
+      "sourceIds": ["commerce-schema"],
       "status": "implemented",
       "evidence": "reviewed",
-      "tags": [
-        "PostgreSQL"
-      ],
+      "tags": ["PostgreSQL"],
       "id": "orders-table",
       "kind": "table",
       "label": "orders",
@@ -335,20 +277,14 @@
             "required": true
           }
         ],
-        "notes": [
-          "Database shape is independent of the public response DTO."
-        ]
+        "notes": ["Database shape is independent of the public response DTO."]
       }
     },
     {
-      "sourceIds": [
-        "commerce-schema"
-      ],
+      "sourceIds": ["commerce-schema"],
       "status": "implemented",
       "evidence": "reviewed",
-      "tags": [
-        "PostgreSQL"
-      ],
+      "tags": ["PostgreSQL"],
       "id": "order-items-table",
       "kind": "table",
       "label": "order_items",
@@ -383,14 +319,10 @@
       }
     },
     {
-      "sourceIds": [
-        "commerce-api"
-      ],
+      "sourceIds": ["commerce-api"],
       "status": "verified",
       "evidence": "reviewed",
-      "tags": [
-        "201 Created"
-      ],
+      "tags": ["201 Created"],
       "id": "created-response",
       "kind": "entity",
       "label": "OrderCreated response",
@@ -412,16 +344,10 @@
       }
     },
     {
-      "sourceIds": [
-        "commerce-api",
-        "commerce-tests"
-      ],
+      "sourceIds": ["commerce-api", "commerce-tests"],
       "status": "verified",
       "evidence": "reviewed",
-      "tags": [
-        "409 Conflict",
-        "Failure path"
-      ],
+      "tags": ["409 Conflict", "Failure path"],
       "id": "stock-conflict",
       "kind": "entity",
       "label": "Insufficient stock",
@@ -432,14 +358,10 @@
       }
     },
     {
-      "sourceIds": [
-        "commerce-service"
-      ],
+      "sourceIds": ["commerce-service"],
       "status": "implemented",
       "evidence": "reviewed",
-      "tags": [
-        "Dependency"
-      ],
+      "tags": ["Dependency"],
       "id": "catalog-lookup",
       "kind": "service",
       "label": "Check availability",
@@ -447,14 +369,10 @@
       "moduleId": "catalog-module"
     },
     {
-      "sourceIds": [
-        "commerce-schema"
-      ],
+      "sourceIds": ["commerce-schema"],
       "status": "implemented",
       "evidence": "reviewed",
-      "tags": [
-        "PostgreSQL"
-      ],
+      "tags": ["PostgreSQL"],
       "id": "products-table",
       "kind": "table",
       "label": "products",
@@ -482,15 +400,10 @@
       }
     },
     {
-      "sourceIds": [
-        "commerce-api"
-      ],
+      "sourceIds": ["commerce-api"],
       "status": "implemented",
       "evidence": "reviewed",
-      "tags": [
-        "GET",
-        "/api/products"
-      ],
+      "tags": ["GET", "/api/products"],
       "id": "list-products",
       "kind": "operation",
       "label": "List products",
@@ -542,14 +455,10 @@
       }
     },
     {
-      "sourceIds": [
-        "commerce-tests"
-      ],
+      "sourceIds": ["commerce-tests"],
       "status": "verified",
       "evidence": "reviewed",
-      "tags": [
-        "Contract evidence"
-      ],
+      "tags": ["Contract evidence"],
       "id": "order-contract-test",
       "kind": "test",
       "label": "Create-order contract tests",
@@ -565,15 +474,10 @@
       }
     },
     {
-      "sourceIds": [
-        "commerce-work"
-      ],
+      "sourceIds": ["commerce-work"],
       "status": "proposed",
       "evidence": "reviewed",
-      "tags": [
-        "Reliability",
-        "Blocker"
-      ],
+      "tags": ["Reliability", "Blocker"],
       "id": "reservation-task",
       "kind": "task",
       "label": "Verify concurrent reservations",
@@ -591,14 +495,10 @@
       }
     },
     {
-      "sourceIds": [
-        "commerce-journey"
-      ],
+      "sourceIds": ["commerce-journey"],
       "status": "accepted",
       "evidence": "reviewed",
-      "tags": [
-        "Architecture decision"
-      ],
+      "tags": ["Architecture decision"],
       "id": "transaction-decision",
       "kind": "decision",
       "label": "One order transaction",
@@ -606,15 +506,10 @@
       "moduleId": "orders-module"
     },
     {
-      "sourceIds": [
-        "commerce-study"
-      ],
+      "sourceIds": ["commerce-study"],
       "status": "proposed",
       "evidence": "inferred",
-      "tags": [
-        "Hypothetical",
-        "Needs review"
-      ],
+      "tags": ["Hypothetical", "Needs review"],
       "id": "failure-study",
       "kind": "topic",
       "label": "Study: failed order submission",
@@ -630,14 +525,10 @@
       }
     },
     {
-      "sourceIds": [
-        "commerce-api"
-      ],
+      "sourceIds": ["commerce-api"],
       "status": "implemented",
       "evidence": "reviewed",
-      "tags": [
-        "Source of truth"
-      ],
+      "tags": ["Source of truth"],
       "id": "api-contract-document",
       "kind": "document",
       "label": "OpenAPI contract",
@@ -650,9 +541,7 @@
       "source": "orders-module",
       "target": "place-order-journey",
       "relation": "contains",
-      "sourceIds": [
-        "commerce-journey"
-      ],
+      "sourceIds": ["commerce-journey"],
       "evidence": "reviewed"
     },
     {
@@ -660,9 +549,7 @@
       "source": "orders-module",
       "target": "create-order",
       "relation": "contains",
-      "sourceIds": [
-        "commerce-journey"
-      ],
+      "sourceIds": ["commerce-journey"],
       "evidence": "reviewed"
     },
     {
@@ -670,9 +557,7 @@
       "source": "catalog-module",
       "target": "list-products",
       "relation": "contains",
-      "sourceIds": [
-        "commerce-journey"
-      ],
+      "sourceIds": ["commerce-journey"],
       "evidence": "reviewed"
     },
     {
@@ -680,9 +565,7 @@
       "source": "order-consumer",
       "target": "create-order",
       "relation": "calls",
-      "sourceIds": [
-        "commerce-journey"
-      ],
+      "sourceIds": ["commerce-journey"],
       "evidence": "reviewed",
       "label": "Submit basket"
     },
@@ -691,9 +574,7 @@
       "source": "create-order",
       "target": "validate-order",
       "relation": "calls",
-      "sourceIds": [
-        "commerce-service"
-      ],
+      "sourceIds": ["commerce-service"],
       "evidence": "reviewed",
       "label": "Validate input"
     },
@@ -702,9 +583,7 @@
       "source": "validate-order",
       "target": "order-service",
       "relation": "next",
-      "sourceIds": [
-        "commerce-service"
-      ],
+      "sourceIds": ["commerce-service"],
       "evidence": "reviewed",
       "label": "Valid basket"
     },
@@ -713,9 +592,7 @@
       "source": "validate-order",
       "target": "stock-conflict",
       "relation": "rejects",
-      "sourceIds": [
-        "commerce-tests"
-      ],
+      "sourceIds": ["commerce-tests"],
       "evidence": "reviewed",
       "label": "Insufficient stock"
     },
@@ -724,9 +601,7 @@
       "source": "validate-order",
       "target": "catalog-lookup",
       "relation": "calls",
-      "sourceIds": [
-        "commerce-service"
-      ],
+      "sourceIds": ["commerce-service"],
       "evidence": "reviewed"
     },
     {
@@ -734,9 +609,7 @@
       "source": "catalog-lookup",
       "target": "products-table",
       "relation": "reads",
-      "sourceIds": [
-        "commerce-service"
-      ],
+      "sourceIds": ["commerce-service"],
       "evidence": "reviewed"
     },
     {
@@ -744,9 +617,7 @@
       "source": "order-service",
       "target": "orders-table",
       "relation": "writes",
-      "sourceIds": [
-        "commerce-service"
-      ],
+      "sourceIds": ["commerce-service"],
       "evidence": "reviewed",
       "label": "Atomic write"
     },
@@ -755,9 +626,7 @@
       "source": "order-service",
       "target": "order-items-table",
       "relation": "writes",
-      "sourceIds": [
-        "commerce-service"
-      ],
+      "sourceIds": ["commerce-service"],
       "evidence": "reviewed"
     },
     {
@@ -765,9 +634,7 @@
       "source": "orders-table",
       "target": "created-response",
       "relation": "returns",
-      "sourceIds": [
-        "commerce-api"
-      ],
+      "sourceIds": ["commerce-api"],
       "evidence": "reviewed",
       "label": "201 Created"
     },
@@ -776,9 +643,7 @@
       "source": "order-items-table",
       "target": "orders-table",
       "relation": "references",
-      "sourceIds": [
-        "commerce-schema"
-      ],
+      "sourceIds": ["commerce-schema"],
       "evidence": "reviewed",
       "label": "order_id"
     },
@@ -787,9 +652,7 @@
       "source": "order-items-table",
       "target": "products-table",
       "relation": "references",
-      "sourceIds": [
-        "commerce-schema"
-      ],
+      "sourceIds": ["commerce-schema"],
       "evidence": "reviewed",
       "label": "product_id"
     },
@@ -798,9 +661,7 @@
       "source": "list-products",
       "target": "products-table",
       "relation": "reads",
-      "sourceIds": [
-        "commerce-service"
-      ],
+      "sourceIds": ["commerce-service"],
       "evidence": "reviewed"
     },
     {
@@ -808,9 +669,7 @@
       "source": "order-contract-test",
       "target": "create-order",
       "relation": "tests",
-      "sourceIds": [
-        "commerce-tests"
-      ],
+      "sourceIds": ["commerce-tests"],
       "evidence": "reviewed"
     },
     {
@@ -818,9 +677,7 @@
       "source": "order-contract-test",
       "target": "stock-conflict",
       "relation": "tests",
-      "sourceIds": [
-        "commerce-tests"
-      ],
+      "sourceIds": ["commerce-tests"],
       "evidence": "reviewed"
     },
     {
@@ -828,9 +685,7 @@
       "source": "reservation-task",
       "target": "catalog-lookup",
       "relation": "blocks",
-      "sourceIds": [
-        "commerce-work"
-      ],
+      "sourceIds": ["commerce-work"],
       "evidence": "reviewed"
     },
     {
@@ -838,9 +693,7 @@
       "source": "transaction-decision",
       "target": "order-service",
       "relation": "documents",
-      "sourceIds": [
-        "commerce-journey"
-      ],
+      "sourceIds": ["commerce-journey"],
       "evidence": "reviewed"
     },
     {
@@ -848,9 +701,7 @@
       "source": "failure-study",
       "target": "stock-conflict",
       "relation": "documents",
-      "sourceIds": [
-        "commerce-study"
-      ],
+      "sourceIds": ["commerce-study"],
       "evidence": "reviewed"
     },
     {
@@ -858,9 +709,7 @@
       "source": "api-contract-document",
       "target": "create-order",
       "relation": "documents",
-      "sourceIds": [
-        "commerce-api"
-      ],
+      "sourceIds": ["commerce-api"],
       "evidence": "reviewed"
     }
   ],
@@ -949,23 +798,14 @@
       "kind": "api",
       "label": "API reference",
       "description": "Inspect declared request schemas, parameters, authentication, success responses, and error variants.",
-      "nodeIds": [
-        "create-order",
-        "list-products",
-        "created-response",
-        "stock-conflict"
-      ]
+      "nodeIds": ["create-order", "list-products", "created-response", "stock-conflict"]
     },
     {
       "id": "data",
       "kind": "data",
       "label": "Data model",
       "description": "Explore synthetic table fields, primary keys, and explicit foreign-key relationships.",
-      "nodeIds": [
-        "orders-table",
-        "order-items-table",
-        "products-table"
-      ]
+      "nodeIds": ["orders-table", "order-items-table", "products-table"]
     },
     {
       "id": "work",
