@@ -7,6 +7,14 @@ so people and coding agents can work from the same bounded context.
 The first release includes a reusable React explorer, a framework-neutral snapshot
 model, an OpenAPI adapter, and a standalone demo with synthetic API and website projects.
 
+[Open the live demo](https://hi-donwi.github.io/Context-Atlas/).
+
+![Context Atlas overview for the synthetic Atlas Commerce API project](docs/images/context-atlas-overview.png)
+
+The journey view connects the API operation to its declared services, data, and response:
+
+![Context Atlas order journey for the synthetic Atlas Commerce API project](docs/images/context-atlas-journey.png)
+
 ```mermaid
 flowchart LR
   Sources[Documents and contracts] --> Adapter[Project adapter]

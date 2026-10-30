@@ -138,13 +138,11 @@ test('same-ID imports reconcile removed views and modules', async ({ page }) => 
       nodeIds: [operation.id],
     },
   ];
-  await page
-    .getByLabel('Import context JSON')
-    .setInputFiles({
-      name: 'replacement.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(JSON.stringify(replacement)),
-    });
+  await page.getByLabel('Import context JSON').setInputFiles({
+    name: 'replacement.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(replacement)),
+  });
   await expect(page.getByRole('status')).toContainText('is ready');
   await expect(page).not.toHaveURL(/module=orders-module/);
   await expect(page).not.toHaveURL(/view=place-order/);

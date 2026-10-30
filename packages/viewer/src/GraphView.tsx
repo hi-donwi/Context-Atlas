@@ -38,14 +38,14 @@ function ContextCard({ data, selected }: NodeProps<AtlasNode>) {
             title={`${node.evidence} evidence`}
           />
         </span>
-        <strong>{node.label}</strong>
+        <strong title={node.label}>{node.label}</strong>
         {node.details?.endpoint ? (
           <code className="atlas-graph-path">
             {node.details.endpoint.method} {node.details.endpoint.path}
           </code>
-        ) : (
+        ) : !node.details?.fields?.length ? (
           <span className="atlas-graph-description">{node.description}</span>
-        )}
+        ) : null}
         {!!node.details?.fields?.length && (
           <span className="atlas-graph-fields">
             {node.details.fields.slice(0, 2).map((field) => (

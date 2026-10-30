@@ -58,7 +58,7 @@ export function layoutNodes(nodes: readonly ContextNode[]) {
   const columns = nodes.length <= 4 ? 2 : 3;
   return nodes.map((node, index) => ({
     node,
-    position: { x: (index % columns) * 270, y: Math.floor(index / columns) * 185 },
+    position: { x: (index % columns) * 270, y: Math.floor(index / columns) * 230 },
   }));
 }
 

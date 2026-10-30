@@ -58,11 +58,13 @@ import '@context-atlas/viewer/styles.css';
 export function ProjectContext({
   snapshot,
   host,
+  exportSourceIds,
 }: {
   snapshot: ContextSnapshot;
   host: ExplorerHost;
+  exportSourceIds: readonly string[];
 }) {
-  return <ContextExplorer snapshot={snapshot} host={host} />;
+  return <ContextExplorer snapshot={snapshot} host={host} allowedSourceIds={exportSourceIds} />;
 }
 ```
 
@@ -77,6 +79,11 @@ Regenerate derived contracts and snapshots after the edit.
 
 Supplying the callback does not turn the graph into an executable workflow or a model
 builder. The standalone demo does not implement application-model editing.
+
+The viewer's optional `allowedSourceIds` narrows export to the host-approved source scope.
+If omitted, export uses the supplied snapshot's sources; that snapshot must already be
+authorized for the reader and export destination. Passing a narrower export scope does
+not hide data from the viewer itself.
 
 ## Export selected context
 
