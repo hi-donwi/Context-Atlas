@@ -1,8 +1,16 @@
-import Ajv from 'ajv';
-import schema from './context-snapshot.schema.json' with { type: 'json' };
+import validateGeneratedSchema from './generated-schema-validator.js';
 import type { ContextSnapshot, ValidationIssue, ValidationResult } from './types.js';
 
-const checkShape = new Ajv({ allErrors: true, strict: true }).compile<ContextSnapshot>(schema);
+interface SchemaError {
+  instancePath: string;
+  message?: string;
+}
+
+type SchemaValidator = ((data: unknown) => data is ContextSnapshot) & {
+  errors?: SchemaError[] | null;
+};
+
+const checkShape = validateGeneratedSchema as SchemaValidator;
 
 function safeSourcePath(path: string): boolean {
   if (

@@ -107,6 +107,12 @@ describe('snapshot validation', () => {
     expect(validateSnapshot(value)).toEqual({ success: true, snapshot: value });
   });
 
+  it('accepts a general project kind when the host has no application type metadata', () => {
+    const value = fixture();
+    const generic = { ...value, project: { ...value.project, kind: 'general' } };
+    expect(validateSnapshot(generic)).toEqual({ success: true, snapshot: generic });
+  });
+
   it.each([null, [], {}, { schemaVersion: '2.0' }, { ...fixture(), unknown: true }])(
     'rejects malformed snapshots',
     (value) => {

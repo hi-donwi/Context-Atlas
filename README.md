@@ -50,8 +50,9 @@ a backend, database, account, or API key.
 - **Study:** explanations, scenarios, and open questions linked to actual project objects.
 
 Each project declares its capabilities. An API project does not need fictional pages,
-and a learning project does not need fictional endpoints. Search and module filtering
-help narrow the work surface; a written inspector keeps details readable without
+and a learning project does not need fictional endpoints. Use the `general` project kind
+when the host has context to show but no technical category to claim. Search and module
+filtering help narrow the work surface; a written inspector keeps details readable without
 putting every field on the canvas.
 
 Implementation status, evidence quality, and source freshness are separate. A proposed
@@ -85,8 +86,19 @@ the viewer. The allowlist is a selection mechanism, not an authorization system.
 | `@context-atlas/viewer`          | Embeddable React navigation, graph, inspector, and context actions  |
 | `@context-atlas/demo`            | Synthetic projects and local file import                            |
 
-These packages are developed together as npm workspaces. This repository does not yet
-provide published npm releases.
+These packages are developed together as npm workspaces. The model and viewer also ship
+their generated package files, so a host can install them from a pinned Git commit without
+publishing them to a package registry. For example:
+
+```sh
+pnpm add 'github:hi-donwi/Context-Atlas#<commit-sha>&path:/packages/model' \
+  'github:hi-donwi/Context-Atlas#<commit-sha>&path:/packages/viewer'
+```
+
+Import `ContextExplorer` and the snapshot types from `@context-atlas/viewer`, then import
+`@context-atlas/viewer/styles.css`. The viewer has a peer dependency on the model package,
+so install both from the same commit. Keep the commit pin in the host's lockfile and update
+it deliberately. The viewer package does not upload or fetch snapshot contents.
 
 ## Verify
 

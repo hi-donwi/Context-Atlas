@@ -2,7 +2,8 @@
 
 Context Atlas accepts a snapshot whose sources the host has already authorized.
 Adapters translate source facts; the viewer provides navigation and interaction.
-The packages are npm workspaces in this repository and are not yet published to npm.
+The packages are npm workspaces in this repository. The model and viewer subdirectories
+also include generated package files for pinned Git installation by host applications.
 
 ## Build a snapshot
 
@@ -51,8 +52,7 @@ contract authoritative and regenerate the snapshot when it changes.
 ## Embed the viewer
 
 ```tsx
-import type { ContextSnapshot, ExplorerHost } from '@context-atlas/model';
-import { ContextExplorer } from '@context-atlas/viewer';
+import { ContextExplorer, type ContextSnapshot, type ExplorerHost } from '@context-atlas/viewer';
 import '@context-atlas/viewer/styles.css';
 
 export function ProjectContext({
@@ -67,6 +67,18 @@ export function ProjectContext({
   return <ContextExplorer snapshot={snapshot} host={host} allowedSourceIds={exportSourceIds} />;
 }
 ```
+
+Install the viewer from a specific Context Atlas commit, quoting the subdirectory specifier
+so the shell does not interpret its `&` separator:
+
+```sh
+pnpm add 'github:hi-donwi/Context-Atlas#<commit-sha>&path:/packages/model' \
+  'github:hi-donwi/Context-Atlas#<commit-sha>&path:/packages/viewer'
+```
+
+The viewer declares the model as a peer dependency. Install both packages from the same
+commit and keep the host lockfile committed so they resolve reproducibly. React and React
+DOM are peer dependencies supplied by the host.
 
 `host.openReference(source)` asks the host to open the selected source. Resolve its
 repository, relative path, and revision within an authorized root. A path in an imported

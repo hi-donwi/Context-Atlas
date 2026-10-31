@@ -20,6 +20,11 @@ Keep TypeScript strict. Put reusable contracts and pure graph behavior in
 The demo supplies examples and browser interactions; it must not become the owner of
 business rules or integration permissions.
 
+The Context Snapshot JSON Schema is the source of truth for structural validation. When it
+changes, regenerate the CSP-safe standalone validator with
+`npm run generate --workspace @context-atlas/model`; the model build checks that the
+generated validator is current.
+
 ## Changes
 
 1. Describe the reader's problem and the expected behavior.

@@ -1,0 +1,6 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { ArrowUpRight } from 'lucide-react';
+import { KindIcon } from './icons.js';
+export function NodeList({ nodes, selectedId, onSelect, }) {
+    return (_jsx("div", { className: "atlas-node-list", "aria-label": "Context objects", children: nodes.map((node) => (_jsxs("button", { type: "button", className: `atlas-object-row ${selectedId === node.id ? 'is-selected' : ''}`, onClick: () => onSelect(node.id), "aria-pressed": selectedId === node.id, children: [_jsx("span", { className: `atlas-kind-icon kind-${node.kind}`, children: _jsx(KindIcon, { kind: node.kind, size: 18 }) }), _jsxs("span", { className: "atlas-object-copy", children: [_jsx("span", { className: "atlas-object-title", children: node.label }), _jsx("span", { className: "atlas-object-description", children: node.description })] }), _jsxs("span", { className: "atlas-object-meta", children: [_jsx("span", { className: "atlas-kind-label", children: node.kind }), _jsx("span", { className: `atlas-status status-${node.status}`, children: node.status })] }), _jsx(ArrowUpRight, { size: 15, className: "atlas-row-arrow", "aria-hidden": "true" })] }, node.id))) }));
+}

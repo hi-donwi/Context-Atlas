@@ -1,0 +1,12 @@
+import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { useRef } from 'react';
+import { ArrowDownToLine, ChevronRight, FileUp, Menu, X } from 'lucide-react';
+export function ExplorerTopbar({ projectName, onOpenNavigation, onImport, importing, canExport, onExport, notice, onDismissNotice, }) {
+    const input = useRef(null);
+    return (_jsxs(_Fragment, { children: [_jsxs("header", { className: "atlas-topbar", children: [_jsxs("div", { className: "atlas-breadcrumb", children: [_jsx("button", { type: "button", className: "atlas-icon-button atlas-mobile-menu", onClick: () => onOpenNavigation(), "aria-label": "Open navigation", children: _jsx(Menu, { size: 19, "aria-hidden": "true" }) }), _jsx("span", { children: "Workspace" }), _jsx(ChevronRight, { size: 13, "aria-hidden": "true" }), _jsx("strong", { children: projectName })] }), _jsxs("div", { className: "atlas-topbar-actions", children: [_jsxs("span", { className: "atlas-browser-badge", children: [_jsx("span", { className: "atlas-local-dot" }), "Browser local"] }), onImport && (_jsxs(_Fragment, { children: [_jsx("input", { ref: input, className: "atlas-sr-only", type: "file", accept: ".json,application/json", "aria-label": "Import context JSON", tabIndex: -1, onChange: (event) => {
+                                            const file = event.currentTarget.files?.[0];
+                                            event.currentTarget.value = '';
+                                            if (file)
+                                                void onImport(file);
+                                        } }), _jsxs("button", { className: "atlas-button atlas-button-secondary", type: "button", onClick: () => input.current?.click(), disabled: importing, children: [_jsx(FileUp, { size: 16, "aria-hidden": "true" }), _jsx("span", { children: importing ? 'Importing…' : 'Import JSON' })] })] })), _jsxs("button", { className: "atlas-button atlas-button-primary", type: "button", disabled: !canExport, onClick: onExport, children: [_jsx(ArrowDownToLine, { size: 16, "aria-hidden": "true" }), _jsx("span", { children: "Export context" })] })] })] }), notice && (_jsxs("div", { className: `atlas-notice notice-${notice.tone}`, role: notice.tone === 'error' ? 'alert' : 'status', children: [_jsx("span", { children: notice.message }), onDismissNotice && (_jsx("button", { className: "atlas-icon-button", type: "button", "aria-label": "Dismiss message", onClick: onDismissNotice, children: _jsx(X, { size: 16, "aria-hidden": "true" }) }))] }))] }));
+}
