@@ -1,5 +1,7 @@
 node_modules/
 dist/
+!packages/core/dist/
+!packages/core/dist/**
 !packages/model/dist/
 !packages/model/dist/**
 !packages/viewer/dist/
