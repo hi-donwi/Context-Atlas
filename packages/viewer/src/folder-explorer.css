@@ -95,6 +95,170 @@
   font-weight: 600;
 }
 
+.atlas-folder-search {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.atlas-folder-search__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-block-size: 2.75rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--atlas-folder-border);
+  border-radius: 0.5rem;
+  background: var(--atlas-folder-paper);
+}
+
+.atlas-folder-search__trigger:hover,
+.atlas-folder-search__close:hover {
+  border-color: var(--atlas-folder-accent);
+  background: var(--atlas-folder-canvas);
+}
+
+.atlas-folder-search__trigger kbd {
+  padding: 0.1rem 0.3rem;
+  border: 1px solid var(--atlas-folder-border);
+  border-radius: 0.25rem;
+  color: var(--atlas-folder-muted);
+  font: 0.7rem/1.4 var(--atlas-folder-mono);
+}
+
+.atlas-folder-search__panel {
+  position: absolute;
+  z-index: 5;
+  inset-block-start: calc(100% + 0.5rem);
+  inset-inline-end: 0;
+  inline-size: min(34rem, calc(100vw - 2rem));
+  max-block-size: min(70dvh, 34rem);
+  overflow: auto;
+  padding: 0.75rem;
+  border: 1px solid var(--atlas-folder-border);
+  border-radius: 0.75rem;
+  background: var(--atlas-folder-paper);
+  box-shadow: 0 1rem 2.5rem rgb(29 51 45 / 16%);
+}
+
+.atlas-folder-search__form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.atlas-folder-search__form input {
+  min-inline-size: 0;
+  flex: 1 1 auto;
+  min-block-size: 2.75rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--atlas-folder-border);
+  border-radius: 0.45rem;
+  color: var(--atlas-folder-ink);
+  background: var(--atlas-folder-paper);
+  font: inherit;
+}
+
+.atlas-folder-search__form input:focus-visible,
+.atlas-folder-search__close:focus-visible,
+.atlas-folder-search__result:focus-visible {
+  outline: 3px solid var(--atlas-folder-accent);
+  outline-offset: 2px;
+}
+
+.atlas-folder-search__close {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  border: 1px solid var(--atlas-folder-border);
+  border-radius: 0.45rem;
+  background: var(--atlas-folder-paper);
+}
+
+.atlas-folder-explorer .atlas-folder-search__submit {
+  flex: 0 0 auto;
+  min-block-size: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--atlas-folder-accent);
+  border-radius: 0.45rem;
+  color: var(--atlas-folder-paper);
+  background: var(--atlas-folder-accent);
+  font-weight: 650 !important;
+}
+
+.atlas-folder-explorer .atlas-folder-search__submit:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.atlas-folder-search__visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.atlas-folder-search__message,
+.atlas-folder-search__summary {
+  padding: 0.75rem 0.25rem 0.35rem;
+  color: var(--atlas-folder-muted);
+  font-size: 0.85rem;
+}
+
+.atlas-folder-search__message--error {
+  color: var(--atlas-folder-danger);
+}
+
+.atlas-folder-search__results {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.atlas-folder-search__result {
+  display: grid;
+  gap: 0.15rem;
+  inline-size: 100%;
+  min-block-size: 3rem;
+  padding: 0.6rem 0.65rem;
+  border: 1px solid transparent;
+  border-radius: 0.45rem;
+  background: transparent;
+  text-align: start;
+}
+
+.atlas-folder-search__result:hover {
+  border-color: var(--atlas-folder-border);
+  background: var(--atlas-folder-canvas);
+}
+
+.atlas-folder-search__result-title {
+  font-weight: 650;
+}
+
+.atlas-folder-search__result-path,
+.atlas-folder-search__result-snippet {
+  color: var(--atlas-folder-muted);
+  font-size: 0.78rem;
+}
+
+.atlas-folder-search__result-path {
+  font-family: var(--atlas-folder-mono);
+}
+
+.atlas-folder-search__result-snippet {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .atlas-folder-explorer__navigation-toggle {
   display: none;
   align-items: center;
@@ -370,6 +534,10 @@
     margin-inline-start: auto;
   }
 
+  .atlas-folder-search {
+    order: 1;
+  }
+
   .atlas-folder-explorer__navigation-toggle {
     display: inline-flex;
     order: 1;
@@ -404,6 +572,20 @@
 
   .atlas-folder-explorer__navigation-toggle {
     inline-size: 100%;
+  }
+
+  .atlas-folder-search {
+    flex: 1 1 auto;
+  }
+
+  .atlas-folder-search__trigger {
+    inline-size: 100%;
+    justify-content: center;
+  }
+
+  .atlas-folder-search__panel {
+    inset-inline-start: 0;
+    inline-size: calc(100vw - 1.7rem);
   }
 
   .atlas-folder-document__source {

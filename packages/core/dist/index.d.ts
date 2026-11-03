@@ -91,3 +91,4 @@ export { resolveLink } from './links.js';
 export type { LinkEntry, ResolvedLink } from './links.js';
 export { createFolderSourceInfo } from './folder-profile.js';
 export type { FolderSourceOptions } from './folder-profile.js';
+export { MAX_SEARCH_QUERY_LENGTH, MAX_SEARCH_RESULTS, MAX_SEARCH_SNIPPET_CHARS, normalizeSearchQuery, } from './search.js';

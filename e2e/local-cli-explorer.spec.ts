@@ -46,7 +46,7 @@ test.beforeAll(async () => {
     join(fixtureRoot, 'README.md'),
     '# Browser guide\n\nUnsafe tags stay visible as source: <script>window.sourceRan = true</script>',
   );
-  await writeFile(join(fixtureRoot, 'docs', 'note.txt'), 'A nested local note.');
+  await writeFile(join(fixtureRoot, 'docs', 'note.txt'), 'A nested local note about orchids.');
   await writeFile(join(fixtureRoot, 'image.png'), Buffer.from([0, 1, 2, 255]));
   await startCli(fixtureRoot);
 });
@@ -92,11 +92,26 @@ test('browse a local folder with keyboard controls, safe previews, and mobile re
     'true',
   );
   await page.getByRole('button', { name: 'Open note.txt' }).click();
-  await expect(page.getByText('A nested local note.')).toBeVisible();
+  await expect(page.getByText('A nested local note about orchids.')).toBeVisible();
 
   await page.getByRole('button', { name: 'Open image.png' }).click();
   await expect(page.getByText('Binary preview unavailable')).toBeVisible();
   await expect(page.getByText('4 bytes', { exact: true })).toBeVisible();
+
+  await page.keyboard.press('Control+k');
+  const searchInput = page.getByRole('searchbox', { name: 'Search files in this folder' });
+  await expect(searchInput).toBeFocused();
+  await searchInput.fill('orch');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  const searchResult = page.getByRole('button', { name: 'Open note.txt at docs/note.txt, line 1' });
+  await expect(searchResult).toBeVisible();
+  await searchResult.press('Enter');
+  await expect(page.getByText('A nested local note about orchids.')).toBeVisible();
+
+  await page.keyboard.press('Control+k');
+  await searchInput.fill('zzzznoresulttoken');
+  await searchInput.press('Enter');
+  await expect(page.getByText('No matching files found.', { exact: true })).toBeVisible();
 
   await page.setViewportSize({ width: 320, height: 800 });
   await expect

@@ -16,6 +16,7 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@context-atlas/core": "0.1.0"
+    "@context-atlas/core": "0.1.0",
+    "minisearch": "7.2.0"
   }
 }

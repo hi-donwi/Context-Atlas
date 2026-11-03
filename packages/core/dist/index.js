@@ -3,3 +3,4 @@ export { isPathWithinRoot, normalizeDirectoryPath, normalizeRelativePath, Unsafe
 export { detectFileType, extractFrontmatterMetadata, extractTitle } from './content-metadata.js';
 export { resolveLink } from './links.js';
 export { createFolderSourceInfo } from './folder-profile.js';
+export { MAX_SEARCH_QUERY_LENGTH, MAX_SEARCH_RESULTS, MAX_SEARCH_SNIPPET_CHARS, normalizeSearchQuery, } from './search.js';

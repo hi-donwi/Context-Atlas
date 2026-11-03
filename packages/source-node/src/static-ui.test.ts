@@ -72,13 +72,18 @@ describe('CLI UI static hosting', () => {
     expect(symlinkEscape.status).toBe(404);
   });
 
-  it('keeps API routes available while unknown API endpoints remain problem details', async () => {
+  it('keeps API routes available and serves search results from the same origin', async () => {
     const info = await fetch(`${server.url}/atlas/api/info`);
-    const search = await fetch(`${server.url}/atlas/api/search?scope=folder&q=notes`);
+    const search = await fetch(`${server.url}/atlas/api/search?scope=folder&q=source`);
 
     expect(info.status).toBe(200);
-    expect(search.status).toBe(404);
-    expect(search.headers.get('content-type')).toContain('application/problem+json');
+    expect(search.status).toBe(200);
+    expect(search.headers.get('content-type')).toContain('application/json');
+    await expect(search.json()).resolves.toMatchObject([{ path: 'notes.md' }]);
+
+    const unknownRoute = await fetch(`${server.url}/atlas/api/unknown`);
+    expect(unknownRoute.status).toBe(404);
+    expect(unknownRoute.headers.get('content-type')).toContain('application/problem+json');
   });
 
   it('returns 404 for the UI root when static hosting is not configured', async () => {

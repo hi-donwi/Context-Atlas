@@ -3,8 +3,14 @@ import type {
   Entry,
   FileContent,
   FileType,
+  SearchHit,
   ScopeInfo,
   SourceInfo,
+} from '@context-atlas/core';
+import {
+  MAX_SEARCH_SNIPPET_CHARS,
+  normalizeRelativePath,
+  UnsafePathError,
 } from '@context-atlas/core';
 
 const API_PREFIX = '/atlas/api';
@@ -149,6 +155,33 @@ function parseFileContent(value: unknown): FileContent {
   };
 }
 
+function parseSearchHit(value: unknown): SearchHit {
+  if (
+    !isRecord(value) ||
+    typeof value.path !== 'string' ||
+    typeof value.snippet !== 'string' ||
+    Array.from(value.snippet).length > MAX_SEARCH_SNIPPET_CHARS ||
+    (value.title !== undefined && typeof value.title !== 'string') ||
+    (value.score !== undefined &&
+      (typeof value.score !== 'number' || !Number.isFinite(value.score))) ||
+    (value.line !== undefined &&
+      (typeof value.line !== 'number' || !Number.isSafeInteger(value.line) || value.line < 1))
+  ) {
+    throw new LocalApiProtocolError();
+  }
+
+  try {
+    if (normalizeRelativePath(value.path) !== value.path) throw new LocalApiProtocolError();
+  } catch (error) {
+    if (error instanceof UnsafePathError || error instanceof LocalApiProtocolError) {
+      throw new LocalApiProtocolError();
+    }
+    throw error;
+  }
+
+  return value as unknown as SearchHit;
+}
+
 function safeProblem(value: unknown, status: number): LocalApiRequestError {
   const code =
     isRecord(value) && typeof value.code === 'string' && /^[A-Z0-9_]{1,64}$/.test(value.code)
@@ -204,6 +237,13 @@ export function createApiContentSource(fetcher: typeof fetch = fetch): ContentSo
     async read(scopeId: string, path: string): Promise<FileContent> {
       const query = new URLSearchParams({ scope: scopeId, path });
       return parseFileContent(await request(`${API_PREFIX}/file?${query.toString()}`));
+    },
+
+    async search(scopeId: string, query: string): Promise<SearchHit[]> {
+      const params = new URLSearchParams({ scope: scopeId, q: query });
+      const value = await request(`${API_PREFIX}/search?${params.toString()}`);
+      if (!Array.isArray(value)) throw new LocalApiProtocolError();
+      return value.map(parseSearchHit);
     },
   };
 }

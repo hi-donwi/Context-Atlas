@@ -91,6 +91,45 @@ describe('createApiContentSource', () => {
     expect(file.size).toBe(4);
   });
 
+  it('searches the requested scope and validates ranked hits', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse([
+        {
+          path: 'docs/orchids.md',
+          title: 'Orchid guide',
+          snippet: 'Orchid care needs light.',
+          score: 1.25,
+          line: 8,
+        },
+      ]),
+    );
+    const source = createApiContentSource(fetcher);
+
+    await expect(source.search!('folder', ' orchid guide ')).resolves.toEqual([
+      {
+        path: 'docs/orchids.md',
+        title: 'Orchid guide',
+        snippet: 'Orchid care needs light.',
+        score: 1.25,
+        line: 8,
+      },
+    ]);
+    expect(fetcher).toHaveBeenCalledWith('/atlas/api/search?scope=folder&q=+orchid+guide+', {
+      headers: { Accept: 'application/json' },
+    });
+  });
+
+  it('rejects malformed search hit payloads', async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        jsonResponse([{ path: '../private.md', snippet: 5, score: 'high', line: 0 }]),
+      );
+    const source = createApiContentSource(fetcher);
+
+    await expect(source.search!('folder', 'private')).rejects.toBeInstanceOf(LocalApiProtocolError);
+  });
+
   it('exposes safe RFC 9457 detail without losing status and code', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
       jsonResponse(

@@ -5,7 +5,9 @@ import { extname, join } from 'node:path';
 import { FileSystemSourceError, type FileSystemSourceErrorCode } from './filesystem-source.js';
 import {
   isPathWithinRoot,
+  MAX_SEARCH_RESULTS,
   normalizeRelativePath,
+  normalizeSearchQuery,
   UnsafePathError,
   type ContentSource,
   type FileContent,
@@ -28,7 +30,8 @@ type ApiErrorCode =
   | 'HOST_NOT_ALLOWED'
   | 'METHOD_NOT_ALLOWED'
   | 'ROUTE_NOT_FOUND'
-  | 'INVALID_QUERY';
+  | 'INVALID_QUERY'
+  | 'SEARCH_NOT_SUPPORTED';
 
 interface ProblemDetails {
   readonly type: 'about:blank';
@@ -88,6 +91,8 @@ function errorDetails(code: ApiErrorCode): { readonly status: number; readonly d
       return { status: 400, detail: 'The path is not a safe relative path.' };
     case 'INVALID_QUERY':
       return { status: 400, detail: 'The query parameters are invalid.' };
+    case 'SEARCH_NOT_SUPPORTED':
+      return { status: 501, detail: 'Search is not supported by this source.' };
     case 'FILE_TOO_LARGE':
       return { status: 413, detail: 'The file exceeds the response size limit.' };
     case 'FILE_CHANGED':
@@ -114,6 +119,8 @@ function statusTitle(status: number): string {
       return 'Conflict';
     case 413:
       return 'Content Too Large';
+    case 501:
+      return 'Not Implemented';
     default:
       return 'Internal Server Error';
   }
@@ -267,6 +274,20 @@ async function routeRequest(
           return;
         }
         sendJson(response, 200, fileResponse);
+        return;
+      }
+
+      case `${API_PREFIX}search`: {
+        validateQuery(url, ['scope', 'q']);
+        const scopeId = requiredParameter(url, 'scope');
+        const query = normalizeSearchQuery(requiredParameter(url, 'q'));
+        if (query === undefined) throw new ApiRequestError();
+        if (source.search === undefined) {
+          sendProblem(response, route, 'SEARCH_NOT_SUPPORTED');
+          return;
+        }
+        const hits = await source.search(scopeId, query);
+        sendJson(response, 200, hits.slice(0, MAX_SEARCH_RESULTS));
         return;
       }
 

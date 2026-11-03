@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FolderPlus, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import type { ContentSource } from '@context-atlas/core';
 import { FolderDocument } from './folder-explorer/FolderDocument.js';
+import { FolderSearch } from './folder-explorer/FolderSearch.js';
 import { FolderTree } from './folder-explorer/FolderTree.js';
 import { useFolderExplorer } from './folder-explorer/use-folder-explorer.js';
 
@@ -25,6 +26,7 @@ export function FolderExplorer({ source }: FolderExplorerProps) {
           <span className="atlas-folder-explorer__eyebrow">Context Atlas · Local folder</span>
           <h1>{state.info?.title ?? 'Context Atlas'}</h1>
         </div>
+        <FolderSearch source={source} scopeId={state.scopeId} onOpenFile={state.selectFile} />
         <span className="atlas-folder-explorer__read-only">Read only</span>
         <button
           className="atlas-folder-explorer__navigation-toggle"

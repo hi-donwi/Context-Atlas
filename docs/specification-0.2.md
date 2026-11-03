@@ -69,15 +69,15 @@ own scope on every operation.
 The CLI source and a host HTTP source implement the same read-only route set. Query values
 are URL-encoded; `scope` is required except for `info`.
 
-| Method and route                   | Parameters                            | Response                                                                                      |
-| ---------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `GET /atlas/api/info`              | None                                  | Source title, profile, scopes, and repository revisions.                                      |
-| `GET /atlas/api/tree?scope=&dir=`  | Scope and optional relative directory | One directory level.                                                                          |
-| `GET /atlas/api/file?scope=&path=` | Scope and relative file path          | File type, content, byte size, modification time, and content encoding.                       |
-| `GET /atlas/api/search?scope=&q=`  | Scope and query                       | Ranked hits with bounded snippets; a MiniSearch candidate runs server-side within that scope. |
-| `GET /atlas/api/events`            | Server-sent events                    | Change notifications for the authorized source.                                               |
+| Method and route                   | Parameters                                   | Response                                                                                                  |
+| ---------------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `GET /atlas/api/info`              | None                                         | Source title, profile, scopes, and repository revisions.                                                  |
+| `GET /atlas/api/tree?scope=&dir=`  | Scope and optional relative directory        | One directory level.                                                                                      |
+| `GET /atlas/api/file?scope=&path=` | Scope and relative file path                 | File type, content, byte size, modification time, and content encoding.                                   |
+| `GET /atlas/api/search?scope=&q=`  | Scope and a trimmed query (1–200 characters) | Up to 20 ranked `SearchHit`s; each snippet is at most 240 characters and includes a matching line number. |
+| `GET /atlas/api/events`            | Server-sent events                           | Change notifications for the authorized source.                                                           |
 
-The initial folder CLI implements only the info, tree, and file routes; search and events
+The initial folder CLI implements the info, tree, file, and local search routes; events
 remain later work. Run `context-atlas [folder] [--port <port>]`; it defaults to the current
 directory and an available port. The CLI binds only to `127.0.0.1`, rejects unexpected
 `Host` values, sends no CORS permission, and uses `default-src 'self'`. Text responses are
@@ -85,6 +85,21 @@ limited to 5 MiB. The file route returns JSON with an `encoding` field: `utf-8` 
 content and `base64` for binary content. Errors use RFC 9457 `application/problem+json`
 with a stable `code`; stack traces and absolute paths are not returned. Routes do not accept
 write requests.
+
+### Phase 4 local search
+
+The Node folder source implements the optional `ContentSource.search` operation and the CLI
+exposes it as `GET /atlas/api/search?scope=&q=`. The query is trimmed and must contain 1–200
+characters; unknown or repeated parameters are rejected. Results are ranked within the one
+authorized folder scope and capped at 20, with a matching excerpt of at most 240 characters
+and a one-based line number. Only recognized text file families are indexed; binary and
+metadata-only files remain excluded, and all paths are revalidated through the source's
+existing scope and exclusion checks.
+
+The CLI builds an in-memory MiniSearch 7.2.0 index lazily on the first search. It is a
+process-local snapshot: file changes after index construction become visible after restarting
+the CLI. A later events phase may add live invalidation. Search never fetches remote resources
+or persists document content or the index to disk.
 
 The CLI serves the built browser UI at `/` and its fixed bundle assets under `/assets/` from
 the same listener and origin. Static file resolution is limited to the installed UI bundle;

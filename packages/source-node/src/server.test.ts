@@ -3,6 +3,7 @@ import { request as httpRequest } from 'node:http';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { ContentSource } from '@context-atlas/core';
 import { openFolderSource } from './filesystem-source.js';
 import { startLocalApiServer } from './server.js';
 
@@ -91,6 +92,45 @@ describe('startLocalApiServer', () => {
     });
   });
 
+  it('serves bounded scoped search results with matching snippets', async () => {
+    const response = await fetch(`${server.url}/atlas/api/search?scope=folder&q=guide`);
+    const hits = (await response.json()) as Array<{
+      path: string;
+      snippet: string;
+      line: number;
+    }>;
+
+    expect(response.status).toBe(200);
+    expect(hits).toHaveLength(1);
+    expect(hits[0]).toMatchObject({ path: 'README.md', line: 1 });
+    expect(hits[0]?.snippet).toContain('# Local guide');
+  });
+
+  it('rejects invalid search queries using stable problem details', async () => {
+    const missingQuery = await fetch(`${server.url}/atlas/api/search?scope=folder`);
+    const blankQuery = await fetch(`${server.url}/atlas/api/search?scope=folder&q=+++`);
+    const longQuery = await fetch(
+      `${server.url}/atlas/api/search?scope=folder&q=${'x'.repeat(201)}`,
+    );
+    const duplicateQuery = await fetch(
+      `${server.url}/atlas/api/search?scope=folder&q=guide&q=guide`,
+    );
+    const unknownParameter = await fetch(
+      `${server.url}/atlas/api/search?scope=folder&q=guide&dir=docs`,
+    );
+
+    for (const response of [
+      missingQuery,
+      blankQuery,
+      longQuery,
+      duplicateQuery,
+      unknownParameter,
+    ]) {
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toMatchObject({ code: 'INVALID_QUERY', status: 400 });
+    }
+  });
+
   it('encodes binary file bytes as base64 JSON', async () => {
     const response = await fetch(`${server.url}/atlas/api/file?scope=folder&path=image.png`);
 
@@ -141,13 +181,32 @@ describe('startLocalApiServer', () => {
     expect(post.headers.get('allow')).toBe('GET');
   });
 
-  it('caps text responses at 5 MiB and refuses unsupported routes', async () => {
+  it('caps text responses at 5 MiB and refuses unknown routes', async () => {
     await writeFile(join(root, 'large.txt'), Buffer.alloc(5 * 1024 * 1024 + 1, 65));
     const tooLarge = await fetch(`${server.url}/atlas/api/file?scope=folder&path=large.txt`);
-    const search = await fetch(`${server.url}/atlas/api/search?scope=folder&q=guide`);
+    const unknown = await fetch(`${server.url}/atlas/api/unknown`);
 
     expect(tooLarge.status).toBe(413);
     await expect(tooLarge.json()).resolves.toMatchObject({ code: 'FILE_TOO_LARGE', status: 413 });
-    expect(search.status).toBe(404);
+    expect(unknown.status).toBe(404);
+  });
+
+  it('returns a safe unsupported response when a source has no search method', async () => {
+    const folderSource = await openFolderSource(root);
+    const sourceWithoutSearch: ContentSource = {
+      describe: () => folderSource.describe(),
+      list: (scopeId, directory) => folderSource.list(scopeId, directory),
+      read: (scopeId, path) => folderSource.read(scopeId, path),
+    };
+    const noSearchServer = await startLocalApiServer(sourceWithoutSearch);
+
+    try {
+      const response = await fetch(`${noSearchServer.url}/atlas/api/search?scope=folder&q=guide`);
+
+      expect(response.status).toBe(501);
+      await expect(response.json()).resolves.toMatchObject({ code: 'SEARCH_NOT_SUPPORTED' });
+    } finally {
+      await noSearchServer.close();
+    }
   });
 });

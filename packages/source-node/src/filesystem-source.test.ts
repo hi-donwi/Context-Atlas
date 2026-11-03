@@ -138,4 +138,94 @@ describe('openFolderSource', () => {
       code: 'FILE_TOO_LARGE',
     });
   });
+
+  it('returns ranked text matches with a bounded matching snippet and one-based line', async () => {
+    await mkdir(join(root, 'docs'));
+    await writeFile(
+      join(root, 'docs', 'orchid-care.md'),
+      '# Orchid care\n\nOrchids prefer shade.\n',
+    );
+    await writeFile(join(root, 'notes.md'), '# Notes\n\nFlowers need water.\n');
+    const source = await openFolderSource(root);
+
+    const hits = await source.search!('folder', 'orchids shade');
+    const orchidHit = hits.find(({ path }) => path === 'docs/orchid-care.md');
+
+    expect(orchidHit).toBeDefined();
+    expect(orchidHit?.title).toBe('Orchid care');
+    expect(orchidHit?.snippet).toContain('Orchids prefer shade.');
+    expect(orchidHit?.line).toBe(3);
+    expect(orchidHit?.score).toBeGreaterThan(0);
+  });
+
+  it('ranks a matching document title above a body-only match', async () => {
+    await writeFile(join(root, 'orchid-guide.md'), '# Orchid guide\nCare notes.\n');
+    await writeFile(join(root, 'garden-notes.md'), '# Garden notes\nOrchid care notes.\n');
+    const source = await openFolderSource(root);
+
+    const hits = await source.search!('folder', 'orchid');
+
+    expect(hits.map(({ path }) => path)).toEqual(['orchid-guide.md', 'garden-notes.md']);
+  });
+
+  it('never indexes excluded paths, binary files, or files outside the scope', async () => {
+    await mkdir(join(root, 'node_modules'));
+    await writeFile(join(root, '.env'), 'orchid private');
+    await writeFile(join(root, 'node_modules', 'secret.md'), 'orchid private');
+    await writeFile(join(root, 'image.png'), Buffer.from('orchid private'));
+    await writeFile(join(outside, 'outside.md'), 'orchid private');
+    await symlink(join(outside, 'outside.md'), join(root, 'outside.md'));
+    await writeFile(join(root, 'public.txt'), 'ordinary orchid note');
+    const source = await openFolderSource(root);
+
+    const privateHits = await source.search!('folder', 'private');
+    const orchidHits = await source.search!('folder', 'orchid');
+
+    expect(privateHits.map(({ path }) => path)).toEqual([]);
+    expect(orchidHits.map(({ path }) => path)).toEqual(['public.txt']);
+    await expect(source.search!('other-scope', 'orchid')).rejects.toMatchObject({
+      code: 'INVALID_SCOPE',
+    });
+  });
+
+  it('rejects empty and overlong search queries', async () => {
+    const source = await openFolderSource(root);
+
+    await expect(source.search!('folder', '   ')).rejects.toMatchObject({ code: 'INVALID_QUERY' });
+    await expect(source.search!('folder', 'x'.repeat(201))).rejects.toMatchObject({
+      code: 'INVALID_QUERY',
+    });
+  });
+
+  it('caps results and snippets for a query matching many files', async () => {
+    await Promise.all(
+      Array.from({ length: 25 }, (_, index) =>
+        writeFile(
+          join(root, `note-${index}.md`),
+          `${'padding '.repeat(80)}needle result ${index}${' trailing'.repeat(80)}`,
+        ),
+      ),
+    );
+    const source = await openFolderSource(root);
+
+    const hits = await source.search!('folder', 'needle');
+
+    expect(hits).toHaveLength(20);
+    expect(hits.every(({ snippet }) => (snippet?.length ?? 0) <= 240)).toBe(true);
+    expect(hits.every(({ snippet }) => snippet?.includes('needle'))).toBe(true);
+  });
+
+  it('keeps the lazy index as a process-local snapshot until a source is reopened', async () => {
+    await writeFile(join(root, 'initial.txt'), 'A local starting document.');
+    const source = await openFolderSource(root);
+    await source.search!('folder', 'newlyadded');
+
+    await writeFile(join(root, 'later.txt'), 'A newlyadded local document.');
+
+    await expect(source.search!('folder', 'newlyadded')).resolves.toEqual([]);
+    const reopenedSource = await openFolderSource(root);
+    await expect(reopenedSource.search!('folder', 'newlyadded')).resolves.toMatchObject([
+      { path: 'later.txt', line: 1 },
+    ]);
+  });
 });
