@@ -5,14 +5,20 @@
   "license": "MIT",
   "files": [
     "dist",
-    "src/styles.css"
+    "src/styles.css",
+    "src/folder-explorer.css"
   ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./styles.css": "./src/styles.css"
+    "./folder-explorer": {
+      "types": "./dist/FolderExplorer.d.ts",
+      "import": "./dist/FolderExplorer.js"
+    },
+    "./styles.css": "./src/styles.css",
+    "./folder-explorer.css": "./src/folder-explorer.css"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json"
@@ -23,6 +29,7 @@
     "react-dom": "^19.0.0"
   },
   "dependencies": {
+    "@context-atlas/core": "0.1.0",
     "@xyflow/react": "12.12.0",
     "lucide-react": "1.64.0"
   }

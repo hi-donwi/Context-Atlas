@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -45,22 +45,36 @@ describe('parseCliArgs', () => {
 
 describe('runCli', () => {
   let root: string;
+  let uiRoot: string;
 
   beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), 'context-atlas-cli-'));
+    [root, uiRoot] = await Promise.all([
+      mkdtemp(join(tmpdir(), 'context-atlas-cli-')),
+      mkdtemp(join(tmpdir(), 'context-atlas-cli-ui-')),
+    ]);
+    await mkdir(join(uiRoot, 'assets'));
+    await writeFile(join(uiRoot, 'index.html'), '<!doctype html><title>Atlas</title>');
   });
 
   afterEach(async () => {
-    await rm(root, { recursive: true, force: true });
+    await Promise.all([
+      rm(root, { recursive: true, force: true }),
+      rm(uiRoot, { recursive: true, force: true }),
+    ]);
   });
 
   it('starts the loopback API and prints no absolute folder path', async () => {
     const messages: string[] = [];
-    const server = await runCli([root], { log: (message) => messages.push(message) });
+    const server = await runCli(
+      [root],
+      { log: (message) => messages.push(message) },
+      { uiDirectory: uiRoot },
+    );
 
     expect(server?.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
     expect(messages).toEqual([`Context Atlas API listening at ${server?.url}`]);
     expect(messages.join(' ')).not.toContain(root);
+    await expect(fetch(server?.url ?? '')).resolves.toMatchObject({ status: 200 });
     await server?.close();
   });
 

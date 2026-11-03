@@ -63,7 +63,7 @@ describe('startLocalApiServer', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get('access-control-allow-origin')).toBeNull();
-    expect(response.headers.get('content-security-policy')).toBe("default-src 'self'");
+    expect(response.headers.get('content-security-policy')).toContain("default-src 'self'");
     await expect(response.json()).resolves.toMatchObject({
       profile: 'folder',
       scopes: [{ id: 'folder' }],

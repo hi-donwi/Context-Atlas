@@ -1,4 +1,5 @@
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { openFolderSource, startLocalApiServer } from '@context-atlas/source-node';
 import type { LocalApiServer } from '@context-atlas/source-node';
 
@@ -12,6 +13,11 @@ export interface CliOptions {
 
 export interface CliOutput {
   log(message: string): void;
+}
+
+export interface CliRuntimeOptions {
+  /** Override the installed browser bundle directory for tests or embedded hosts. */
+  readonly uiDirectory?: string;
 }
 
 /** An invalid command-line invocation, safe to print without a stack trace. */
@@ -60,6 +66,7 @@ export function parseCliArgs(
 export async function runCli(
   args: readonly string[],
   output: CliOutput = { log: (message) => console.log(message) },
+  runtime: CliRuntimeOptions = {},
 ): Promise<LocalApiServer | undefined> {
   const options = parseCliArgs(args);
   if (options.help) {
@@ -68,7 +75,8 @@ export async function runCli(
   }
 
   const source = await openFolderSource(options.rootPath);
-  const server = await startLocalApiServer(source, { port: options.port });
+  const uiDirectory = runtime.uiDirectory ?? fileURLToPath(new URL('./ui/', import.meta.url));
+  const server = await startLocalApiServer(source, { port: options.port, uiDirectory });
   output.log(`Context Atlas API listening at ${server.url}`);
   return server;
 }

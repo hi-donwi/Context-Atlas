@@ -1,10 +1,27 @@
 import { createServer } from 'node:http';
 import type { IncomingMessage, Server, ServerResponse } from 'node:http';
+import { readFile, realpath, stat } from 'node:fs/promises';
+import { extname, join } from 'node:path';
 import { FileSystemSourceError, type FileSystemSourceErrorCode } from './filesystem-source.js';
-import type { ContentSource, FileContent } from '@context-atlas/core';
+import {
+  isPathWithinRoot,
+  normalizeRelativePath,
+  UnsafePathError,
+  type ContentSource,
+  type FileContent,
+} from '@context-atlas/core';
 
 const API_PREFIX = '/atlas/api/';
 const MAX_TEXT_RESPONSE_BYTES = 5 * 1024 * 1024;
+const MAX_UI_FILE_BYTES = 5 * 1024 * 1024;
+
+const UI_CONTENT_TYPES: Readonly<Record<string, string>> = {
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.woff2': 'font/woff2',
+};
 
 type ApiErrorCode =
   | FileSystemSourceErrorCode
@@ -34,6 +51,13 @@ interface FileResponse {
 interface ServerOptions {
   /** Bind to an available port with `0`; the server always binds to `127.0.0.1`. */
   readonly port?: number;
+  /** Optional root containing the fixed, built browser UI bundle. */
+  readonly uiDirectory?: string;
+}
+
+interface UiRoot {
+  readonly path: string;
+  readonly indexPath: string;
 }
 
 class ApiRequestError extends Error {
@@ -96,7 +120,10 @@ function statusTitle(status: number): string {
 }
 
 function setSecurityHeaders(response: ServerResponse): void {
-  response.setHeader('Content-Security-Policy', "default-src 'self'");
+  response.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+  );
   response.setHeader('X-Content-Type-Options', 'nosniff');
   response.setHeader('Cache-Control', 'no-store');
   response.setHeader('Referrer-Policy', 'no-referrer');
@@ -188,6 +215,7 @@ async function routeRequest(
   source: ContentSource,
   expectedHost: string,
   baseUrl: string,
+  uiRoot: UiRoot | undefined,
 ): Promise<void> {
   setSecurityHeaders(response);
 
@@ -243,10 +271,97 @@ async function routeRequest(
       }
 
       default:
-        sendProblem(response, route, 'ROUTE_NOT_FOUND');
+        if (uiRoot !== undefined && !route.startsWith(API_PREFIX)) {
+          await serveUiRoute(url, response, uiRoot);
+        } else {
+          sendProblem(response, route, 'ROUTE_NOT_FOUND');
+        }
     }
   } catch (error) {
     sendProblem(response, route, sourceErrorCode(error));
+  }
+}
+
+async function openUiRoot(directory: string): Promise<UiRoot> {
+  try {
+    const path = await realpath(directory);
+    const directoryStat = await stat(path);
+    if (!directoryStat.isDirectory()) throw new Error('not a directory');
+
+    const indexPath = await realpath(join(path, 'index.html'));
+    const indexStat = await stat(indexPath);
+    if (!isPathWithinRoot(path, indexPath) || !indexStat.isFile()) {
+      throw new Error('invalid index file');
+    }
+    return { path, indexPath };
+  } catch {
+    throw new Error('The bundled browser UI is unavailable.');
+  }
+}
+
+async function serveUiRoute(url: URL, response: ServerResponse, uiRoot: UiRoot): Promise<void> {
+  if (url.search !== '') {
+    sendProblem(response, url.pathname, 'INVALID_QUERY');
+    return;
+  }
+
+  let targetPath: string;
+  let contentType: string;
+  if (url.pathname === '/') {
+    targetPath = uiRoot.indexPath;
+    contentType = 'text/html; charset=utf-8';
+  } else if (url.pathname.startsWith('/assets/')) {
+    let normalizedPath: string;
+    try {
+      normalizedPath = normalizeRelativePath(decodeURIComponent(url.pathname.slice(1)));
+    } catch (error) {
+      if (error instanceof UnsafePathError || error instanceof URIError) {
+        sendProblem(response, url.pathname, 'ROUTE_NOT_FOUND');
+        return;
+      }
+      throw error;
+    }
+
+    const extension = extname(normalizedPath).toLowerCase();
+    const assetContentType = UI_CONTENT_TYPES[extension];
+    if (!normalizedPath.startsWith('assets/') || assetContentType === undefined) {
+      sendProblem(response, url.pathname, 'ROUTE_NOT_FOUND');
+      return;
+    }
+    targetPath = join(uiRoot.path, ...normalizedPath.split('/'));
+    contentType = assetContentType;
+  } else {
+    sendProblem(response, url.pathname, 'ROUTE_NOT_FOUND');
+    return;
+  }
+
+  try {
+    const resolvedPath = await realpath(targetPath);
+    if (!isPathWithinRoot(uiRoot.path, resolvedPath)) {
+      sendProblem(response, url.pathname, 'ROUTE_NOT_FOUND');
+      return;
+    }
+    const fileStat = await stat(resolvedPath);
+    if (!fileStat.isFile()) {
+      sendProblem(response, url.pathname, 'ROUTE_NOT_FOUND');
+      return;
+    }
+    if (fileStat.size > MAX_UI_FILE_BYTES) {
+      sendProblem(response, url.pathname, 'FILE_TOO_LARGE');
+      return;
+    }
+
+    const content = await readFile(resolvedPath);
+    if (content.byteLength > MAX_UI_FILE_BYTES) {
+      sendProblem(response, url.pathname, 'FILE_TOO_LARGE');
+      return;
+    }
+    response.statusCode = 200;
+    response.setHeader('Content-Type', contentType);
+    response.setHeader('Content-Length', content.byteLength);
+    response.end(content);
+  } catch {
+    sendProblem(response, url.pathname, 'ROUTE_NOT_FOUND');
   }
 }
 
@@ -260,10 +375,13 @@ export async function startLocalApiServer(
     throw new RangeError('Port must be an integer from 0 to 65535.');
   }
 
+  const uiRoot =
+    options.uiDirectory === undefined ? undefined : await openUiRoot(options.uiDirectory);
+
   let expectedHost = '';
   let baseUrl = '';
   const server: Server = createServer((request, response) => {
-    void routeRequest(request, response, source, expectedHost, baseUrl).catch(() => {
+    void routeRequest(request, response, source, expectedHost, baseUrl, uiRoot).catch(() => {
       if (response.headersSent || response.destroyed) return;
       sendProblem(response, '/', 'FILESYSTEM_ERROR');
     });

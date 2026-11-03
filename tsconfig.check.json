@@ -7,7 +7,8 @@
       "@context-atlas/source-node": ["./packages/source-node/src/index.ts"],
       "@context-atlas/model": ["./packages/model/src/index.ts"],
       "@context-atlas/adapter-openapi": ["./packages/adapter-openapi/src/index.ts"],
-      "@context-atlas/viewer": ["./packages/viewer/src/index.ts"]
+      "@context-atlas/viewer": ["./packages/viewer/src/index.ts"],
+      "@context-atlas/viewer/folder-explorer": ["./packages/viewer/src/FolderExplorer.tsx"]
     }
   },
   "include": [

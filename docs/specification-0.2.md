@@ -86,6 +86,11 @@ content and `base64` for binary content. Errors use RFC 9457 `application/proble
 with a stable `code`; stack traces and absolute paths are not returned. Routes do not accept
 write requests.
 
+The CLI serves the built browser UI at `/` and its fixed bundle assets under `/assets/` from
+the same listener and origin. Static file resolution is limited to the installed UI bundle;
+the selected folder is never a static root. Unknown paths remain 404 problem responses, and
+the existing API routes take precedence over UI handling.
+
 ## Viewer layout
 
 | Area   | Contents                                                                                                                               |
@@ -98,6 +103,16 @@ write requests.
 Deep links use `#/<scope>/<path>#<heading>` and are reloadable. On narrow screens, the tree
 and outline become drawers while the document keeps the available width. Folder profile
 does not show a scope switcher.
+
+### Phase 3 initial browser slice
+
+The initial CLI-hosted explorer implements one-folder source info, lazy one-level tree
+navigation, file selection, and a root landing view that prefers `README.md`, then
+`index.md`, otherwise a list of available entries or an empty state. Text files are shown
+as inert, escaped source; binary files show type and size metadata. Markdown is not parsed
+as HTML in this slice. Loading, missing-file, and source errors are visible and announced;
+the navigation uses native keyboard-operable controls and visible focus. Search, events,
+scope switching, writes, remote fetches, and rich renderers remain later work.
 
 ## Renderer matrix
 

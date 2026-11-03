@@ -1,0 +1,424 @@
+.atlas-folder-explorer {
+  --atlas-folder-ink: #1d332d;
+  --atlas-folder-paper: #ffffff;
+  --atlas-folder-canvas: #f6f7f3;
+  --atlas-folder-mist: #eef1eb;
+  --atlas-folder-border: #d1d9d1;
+  --atlas-folder-muted: #52635a;
+  --atlas-folder-accent: #176354;
+  --atlas-folder-danger: #8e292d;
+  --atlas-folder-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --atlas-folder-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  min-block-size: 100dvh;
+  color: var(--atlas-folder-ink);
+  background: var(--atlas-folder-paper);
+  font: 14px/1.55 var(--atlas-folder-font);
+  overflow-wrap: anywhere;
+}
+
+.atlas-folder-explorer,
+.atlas-folder-explorer * {
+  box-sizing: border-box;
+}
+
+.atlas-folder-explorer button {
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.atlas-folder-explorer button:focus-visible,
+.atlas-folder-explorer a:focus-visible {
+  outline: 3px solid var(--atlas-folder-accent);
+  outline-offset: 3px;
+}
+
+.atlas-folder-explorer h1,
+.atlas-folder-explorer h2,
+.atlas-folder-explorer h3,
+.atlas-folder-explorer p {
+  margin: 0;
+}
+
+.atlas-folder-explorer__skip-link {
+  position: fixed;
+  z-index: 10;
+  inset-block-start: -5rem;
+  inset-inline-start: 1rem;
+  padding: 0.75rem 1rem;
+  color: var(--atlas-folder-paper);
+  background: var(--atlas-folder-ink);
+  border-radius: 0.375rem;
+}
+
+.atlas-folder-explorer__skip-link:focus {
+  inset-block-start: 1rem;
+}
+
+.atlas-folder-explorer__header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-block-size: 5.25rem;
+  padding: 0.9rem clamp(1rem, 3vw, 2.5rem);
+  border-block-end: 1px solid var(--atlas-folder-border);
+}
+
+.atlas-folder-explorer__brand {
+  min-inline-size: 0;
+  flex: 1 1 auto;
+}
+
+.atlas-folder-explorer__eyebrow {
+  display: block;
+  margin-block-end: 0.2rem;
+  color: var(--atlas-folder-muted);
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.atlas-folder-explorer__brand h1 {
+  max-inline-size: 70ch;
+  font-size: clamp(1.2rem, 0.95rem + 0.8vw, 1.7rem);
+  line-height: 1.2;
+}
+
+.atlas-folder-explorer__read-only {
+  flex: 0 0 auto;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--atlas-folder-border);
+  border-radius: 999px;
+  color: var(--atlas-folder-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.atlas-folder-explorer__navigation-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-block-size: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--atlas-folder-border);
+  border-radius: 0.5rem;
+  background: var(--atlas-folder-paper);
+}
+
+.atlas-folder-explorer__layout {
+  display: grid;
+  grid-template-columns: minmax(15rem, 20rem) minmax(0, 1fr);
+  min-block-size: calc(100dvh - 5.25rem);
+}
+
+.atlas-folder-explorer__navigation {
+  min-inline-size: 0;
+  padding: 1.5rem 1rem;
+  border-inline-end: 1px solid var(--atlas-folder-border);
+  background: var(--atlas-folder-canvas);
+}
+
+.atlas-folder-explorer__navigation h2 {
+  margin-block-end: 1rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.atlas-folder-explorer__main {
+  min-inline-size: 0;
+  padding: clamp(1.25rem, 4vw, 3.5rem);
+}
+
+.atlas-folder-explorer__muted {
+  color: var(--atlas-folder-muted);
+}
+
+.atlas-folder-explorer__status,
+.atlas-folder-explorer__state,
+.atlas-folder-explorer__landing {
+  max-inline-size: 76rem;
+  margin-inline: auto;
+}
+
+.atlas-folder-explorer__status {
+  padding-block: 2rem;
+  color: var(--atlas-folder-muted);
+}
+
+.atlas-folder-explorer__state {
+  display: grid;
+  justify-items: start;
+  gap: 0.8rem;
+  padding-block: clamp(2rem, 8vh, 6rem);
+}
+
+.atlas-folder-explorer__state h2,
+.atlas-folder-explorer__landing h2 {
+  font-size: clamp(1.35rem, 1rem + 1vw, 2rem);
+  line-height: 1.25;
+}
+
+.atlas-folder-explorer__state button,
+.atlas-folder-explorer__inline-error button {
+  min-block-size: 2.75rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid var(--atlas-folder-accent);
+  border-radius: 0.5rem;
+  color: var(--atlas-folder-paper);
+  background: var(--atlas-folder-accent);
+  font-weight: 650;
+}
+
+.atlas-folder-explorer__inline-error {
+  display: grid;
+  justify-items: start;
+  gap: 0.75rem;
+  color: var(--atlas-folder-danger);
+}
+
+.atlas-folder-tree,
+.atlas-folder-tree ul {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.atlas-folder-tree--nested {
+  margin-inline-start: 0.8rem !important;
+  padding-inline-start: 0.6rem !important;
+  border-inline-start: 1px solid var(--atlas-folder-border);
+}
+
+.atlas-folder-tree__button {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  inline-size: 100%;
+  min-block-size: 2.5rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 0.45rem;
+  background: transparent;
+  text-align: start;
+}
+
+.atlas-folder-tree__button:hover,
+.atlas-folder-tree__button[aria-current='page'] {
+  border-color: var(--atlas-folder-border);
+  background: var(--atlas-folder-paper);
+}
+
+.atlas-folder-tree__button svg {
+  flex: 0 0 auto;
+  color: var(--atlas-folder-muted);
+}
+
+.atlas-folder-tree__button span {
+  min-inline-size: 0;
+}
+
+.atlas-folder-tree__status,
+.atlas-folder-tree__error {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.5rem;
+  color: var(--atlas-folder-muted);
+  font-size: 0.8rem;
+}
+
+.atlas-folder-tree__error {
+  color: var(--atlas-folder-danger);
+}
+
+.atlas-folder-tree__error button {
+  justify-self: start;
+  min-block-size: 2.5rem;
+  border: 0;
+  padding: 0.3rem 0.4rem;
+  color: var(--atlas-folder-accent);
+  background: transparent;
+  text-decoration: underline;
+}
+
+.atlas-folder-document,
+.atlas-folder-explorer__landing {
+  max-inline-size: 76rem;
+  margin-inline: auto;
+}
+
+.atlas-folder-document__path {
+  margin-block-end: 0.35rem !important;
+  color: var(--atlas-folder-muted);
+  font: 0.8rem/1.5 var(--atlas-folder-mono);
+}
+
+.atlas-folder-document h2 {
+  margin-block-end: 1rem;
+  font-size: clamp(1.5rem, 1.1rem + 1.3vw, 2.25rem);
+  line-height: 1.2;
+}
+
+.atlas-folder-document__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin: 0 0 1.5rem;
+  padding: 0.75rem 0;
+  border-block: 1px solid var(--atlas-folder-border);
+  color: var(--atlas-folder-muted);
+  font-size: 0.8rem;
+}
+
+.atlas-folder-document__facts div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.atlas-folder-document__facts dt {
+  font-weight: 650;
+}
+
+.atlas-folder-document__facts dd {
+  margin: 0;
+}
+
+.atlas-folder-document__source {
+  max-block-size: min(72dvh, 60rem);
+  overflow: auto;
+  margin: 0;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  border: 1px solid var(--atlas-folder-border);
+  border-radius: 0.75rem;
+  color: var(--atlas-folder-ink);
+  background: var(--atlas-folder-canvas);
+  font: 0.9rem/1.7 var(--atlas-folder-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 2;
+}
+
+.atlas-folder-document__binary {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1.25rem;
+  border: 1px solid var(--atlas-folder-border);
+  border-radius: 0.75rem;
+  background: var(--atlas-folder-canvas);
+}
+
+.atlas-folder-document__binary h3 {
+  font-size: 1rem;
+}
+
+.atlas-folder-explorer__landing {
+  padding-block: clamp(1.5rem, 7vh, 5rem);
+}
+
+.atlas-folder-explorer__landing > h2,
+.atlas-folder-explorer__landing > p {
+  margin-block-end: 0.75rem;
+}
+
+.atlas-folder-explorer__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 0.75rem;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.atlas-folder-explorer__cards button {
+  display: grid;
+  justify-items: start;
+  gap: 0.35rem;
+  inline-size: 100%;
+  min-block-size: 5rem;
+  padding: 1rem;
+  border: 1px solid var(--atlas-folder-border);
+  border-radius: 0.65rem;
+  background: var(--atlas-folder-paper);
+  text-align: start;
+}
+
+.atlas-folder-explorer__cards button:hover {
+  border-color: var(--atlas-folder-accent);
+  background: var(--atlas-folder-canvas);
+}
+
+.atlas-folder-explorer__card-meta {
+  color: var(--atlas-folder-muted);
+  font-size: 0.75rem;
+}
+
+@media (max-width: 760px) {
+  .atlas-folder-explorer__header {
+    flex-wrap: wrap;
+  }
+
+  .atlas-folder-explorer__brand {
+    flex-basis: calc(100% - 8rem);
+  }
+
+  .atlas-folder-explorer__read-only {
+    margin-inline-start: auto;
+  }
+
+  .atlas-folder-explorer__navigation-toggle {
+    display: inline-flex;
+    order: 1;
+  }
+
+  .atlas-folder-explorer__layout {
+    grid-template-columns: minmax(0, 1fr);
+    min-block-size: calc(100dvh - 8.5rem);
+  }
+
+  .atlas-folder-explorer__navigation {
+    max-block-size: 42dvh;
+    overflow: auto;
+    border-inline-end: 0;
+    border-block-end: 1px solid var(--atlas-folder-border);
+  }
+
+  .atlas-folder-explorer__navigation[data-open='false'] {
+    display: none;
+  }
+
+  .atlas-folder-explorer__main {
+    padding: clamp(1rem, 5vw, 1.75rem);
+  }
+}
+
+@media (max-width: 380px) {
+  .atlas-folder-explorer__header {
+    gap: 0.65rem;
+    padding-inline: 0.85rem;
+  }
+
+  .atlas-folder-explorer__navigation-toggle {
+    inline-size: 100%;
+  }
+
+  .atlas-folder-document__source {
+    padding: 0.85rem;
+    font-size: 0.82rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atlas-folder-explorer *,
+  .atlas-folder-explorer *::before,
+  .atlas-folder-explorer *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,226 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ContentSource, Entry, FileContent, SourceInfo } from '@context-atlas/core';
+import {
+  findDefaultDocument,
+  formatExplorerLocation,
+  parseExplorerLocation,
+} from './path-state.js';
+
+type HistoryMode = 'push' | 'replace' | 'none';
+
+export interface FolderExplorerState {
+  readonly info: SourceInfo | null;
+  readonly scopeId: string | null;
+  readonly entriesByDirectory: Readonly<Record<string, readonly Entry[]>>;
+  readonly expandedDirectories: ReadonlySet<string>;
+  readonly loadingDirectories: ReadonlySet<string>;
+  readonly directoryErrors: Readonly<Record<string, string>>;
+  readonly sourceLoading: boolean;
+  readonly sourceError: string | null;
+  readonly selectedPath: string | null;
+  readonly selectedFile: FileContent | null;
+  readonly fileLoading: boolean;
+  readonly fileError: string | null;
+  readonly reloadSource: () => void;
+  readonly toggleDirectory: (path: string) => void;
+  readonly retryDirectory: (path: string) => void;
+  readonly selectFile: (path: string) => void;
+  readonly retryFile: () => void;
+}
+
+export function useFolderExplorer(source: ContentSource): FolderExplorerState {
+  const [sourceAttempt, setSourceAttempt] = useState(0);
+  const [info, setInfo] = useState<SourceInfo | null>(null);
+  const [scopeId, setScopeId] = useState<string | null>(null);
+  const [entriesByDirectory, setEntriesByDirectory] = useState<Record<string, Entry[]>>({});
+  const [expandedDirectories, setExpandedDirectories] = useState<Set<string>>(new Set());
+  const [loadingDirectories, setLoadingDirectories] = useState<Set<string>>(new Set());
+  const [directoryErrors, setDirectoryErrors] = useState<Record<string, string>>({});
+  const [sourceLoading, setSourceLoading] = useState(true);
+  const [sourceError, setSourceError] = useState<string | null>(null);
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<FileContent | null>(null);
+  const [fileLoading, setFileLoading] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const fileRequestId = useRef(0);
+  const initialSelectionHandled = useRef(false);
+
+  const reloadSource = useCallback(() => setSourceAttempt((attempt) => attempt + 1), []);
+
+  const selectFile = useCallback(
+    async (path: string, historyMode: HistoryMode = 'push') => {
+      if (scopeId === null) return;
+      const requestId = ++fileRequestId.current;
+      setSelectedPath(path);
+      setSelectedFile(null);
+      setFileError(null);
+      setFileLoading(true);
+
+      if (historyMode !== 'none') {
+        const nextHash = formatExplorerLocation(scopeId, path);
+        if (window.location.hash !== nextHash) {
+          window.history[historyMode === 'push' ? 'pushState' : 'replaceState'](null, '', nextHash);
+        }
+      }
+
+      try {
+        const file = await source.read(scopeId, path);
+        if (fileRequestId.current === requestId) setSelectedFile(file);
+      } catch {
+        if (fileRequestId.current === requestId) {
+          setFileError('The selected file could not be opened. It may have moved or be excluded.');
+        }
+      } finally {
+        if (fileRequestId.current === requestId) setFileLoading(false);
+      }
+    },
+    [scopeId, source],
+  );
+
+  useEffect(() => {
+    let active = true;
+    initialSelectionHandled.current = false;
+    fileRequestId.current += 1;
+    setInfo(null);
+    setScopeId(null);
+    setEntriesByDirectory({});
+    setExpandedDirectories(new Set());
+    setLoadingDirectories(new Set());
+    setDirectoryErrors({});
+    setSelectedPath(null);
+    setSelectedFile(null);
+    setSourceError(null);
+    setSourceLoading(true);
+
+    void (async () => {
+      try {
+        const sourceInfo = await source.describe();
+        if (sourceInfo.profile !== 'folder' || sourceInfo.scopes.length !== 1) {
+          throw new Error('unsupported profile');
+        }
+        const folderScope = sourceInfo.scopes[0];
+        if (folderScope === undefined) throw new Error('missing scope');
+        const rootEntries = await source.list(folderScope.id, '');
+        if (!active) return;
+        setInfo(sourceInfo);
+        setScopeId(folderScope.id);
+        setEntriesByDirectory({ '': rootEntries });
+      } catch {
+        if (active)
+          setSourceError(
+            'The folder source could not be loaded. Check the local server and retry.',
+          );
+      } finally {
+        if (active) setSourceLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+      fileRequestId.current += 1;
+    };
+  }, [source, sourceAttempt]);
+
+  useEffect(() => {
+    const rootEntries = entriesByDirectory[''];
+    if (scopeId === null || rootEntries === undefined || initialSelectionHandled.current) return;
+    initialSelectionHandled.current = true;
+
+    const location = parseExplorerLocation(window.location.hash);
+    if (location?.scopeId === scopeId) {
+      void selectFile(location.path, 'none');
+      return;
+    }
+    const defaultPath = findDefaultDocument(rootEntries);
+    if (defaultPath !== undefined) void selectFile(defaultPath, 'replace');
+  }, [entriesByDirectory, scopeId, selectFile]);
+
+  useEffect(() => {
+    if (scopeId === null) return;
+    const handleHashChange = (): void => {
+      const location = parseExplorerLocation(window.location.hash);
+      if (location?.scopeId === scopeId) {
+        void selectFile(location.path, 'none');
+      } else {
+        fileRequestId.current += 1;
+        setSelectedPath(null);
+        setSelectedFile(null);
+        setFileError(null);
+        setFileLoading(false);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [scopeId, selectFile]);
+
+  const loadDirectory = useCallback(
+    (path: string): void => {
+      if (scopeId === null) return;
+      setLoadingDirectories((current) => new Set(current).add(path));
+      setDirectoryErrors((current) => {
+        const next = { ...current };
+        delete next[path];
+        return next;
+      });
+
+      void source
+        .list(scopeId, path)
+        .then((entries) => setEntriesByDirectory((current) => ({ ...current, [path]: entries })))
+        .catch(() =>
+          setDirectoryErrors((current) => ({ ...current, [path]: 'Could not load this folder.' })),
+        )
+        .finally(() =>
+          setLoadingDirectories((current) => {
+            const next = new Set(current);
+            next.delete(path);
+            return next;
+          }),
+        );
+    },
+    [scopeId, source],
+  );
+
+  const toggleDirectory = useCallback(
+    (path: string): void => {
+      if (scopeId === null) return;
+      if (expandedDirectories.has(path)) {
+        setExpandedDirectories((current) => {
+          const next = new Set(current);
+          next.delete(path);
+          return next;
+        });
+        return;
+      }
+
+      setExpandedDirectories((current) => new Set(current).add(path));
+      if (entriesByDirectory[path] === undefined && !loadingDirectories.has(path)) {
+        loadDirectory(path);
+      }
+    },
+    [entriesByDirectory, expandedDirectories, loadDirectory, loadingDirectories, scopeId],
+  );
+
+  const retryFile = useCallback(() => {
+    if (selectedPath !== null) void selectFile(selectedPath, 'none');
+  }, [selectedPath, selectFile]);
+
+  return {
+    info,
+    scopeId,
+    entriesByDirectory,
+    expandedDirectories,
+    loadingDirectories,
+    directoryErrors,
+    sourceLoading,
+    sourceError,
+    selectedPath,
+    selectedFile,
+    fileLoading,
+    fileError,
+    reloadSource,
+    toggleDirectory,
+    retryDirectory: loadDirectory,
+    selectFile: (path) => void selectFile(path),
+    retryFile,
+  };
+}
