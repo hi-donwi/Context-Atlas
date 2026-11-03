@@ -35,7 +35,8 @@ The fixed denylist applies in every profile: `.git/`, `.local/`, `node_modules/`
 nor served. Files larger than 10 MB may be listed as metadata only; their contents are not
 read, rendered, or indexed. Optional root `atlas.json` metadata may set a title, include or
 exclude globs, named scopes, or a default document, but cannot relax the fixed denylist or
-the host's authorized scope.
+the host's authorized scope. The initial local folder source reads only the optional `title`;
+globs, named scopes, and default-document selection remain later work.
 
 Static build is permitted for one `folder`-profile scope. It is refused for the `workspace`
 profile, including the workspace root, and is not a mechanism for exporting All or multiple
@@ -72,14 +73,18 @@ are URL-encoded; `scope` is required except for `info`.
 | ---------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------- |
 | `GET /atlas/api/info`              | None                                  | Source title, profile, scopes, and repository revisions.                                      |
 | `GET /atlas/api/tree?scope=&dir=`  | Scope and optional relative directory | One directory level.                                                                          |
-| `GET /atlas/api/file?scope=&path=` | Scope and relative file path          | File type, content, byte size, and modification time.                                         |
+| `GET /atlas/api/file?scope=&path=` | Scope and relative file path          | File type, content, byte size, modification time, and content encoding.                       |
 | `GET /atlas/api/search?scope=&q=`  | Scope and query                       | Ranked hits with bounded snippets; a MiniSearch candidate runs server-side within that scope. |
 | `GET /atlas/api/events`            | Server-sent events                    | Change notifications for the authorized source.                                               |
 
-The events route is optional when the source cannot watch for changes. The CLI binds to
-`127.0.0.1` on an available port, rejects unexpected `Host` values, sends no CORS
-permission, and uses `default-src 'self'` with only renderer-specific CSP allowances. Text
-responses are limited to 5 MB. Routes do not accept write requests.
+The initial folder CLI implements only the info, tree, and file routes; search and events
+remain later work. Run `context-atlas [folder] [--port <port>]`; it defaults to the current
+directory and an available port. The CLI binds only to `127.0.0.1`, rejects unexpected
+`Host` values, sends no CORS permission, and uses `default-src 'self'`. Text responses are
+limited to 5 MiB. The file route returns JSON with an `encoding` field: `utf-8` for textual
+content and `base64` for binary content. Errors use RFC 9457 `application/problem+json`
+with a stable `code`; stack traces and absolute paths are not returned. Routes do not accept
+write requests.
 
 ## Viewer layout
 
