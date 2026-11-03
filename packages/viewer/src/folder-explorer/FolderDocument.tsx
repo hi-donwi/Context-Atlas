@@ -1,4 +1,6 @@
 import type { FileContent } from '@context-atlas/core';
+import { MarkdownDocument } from './MarkdownDocument.js';
+import { MermaidDiagram } from './MermaidDiagram.js';
 
 interface FolderDocumentProps {
   readonly path: string;
@@ -33,7 +35,11 @@ export function FolderDocument({ path, file }: FolderDocumentProps) {
           </div>
         )}
       </dl>
-      {typeof file.content === 'string' ? (
+      {typeof file.content === 'string' && file.type === 'markdown' ? (
+        <MarkdownDocument content={file.content} />
+      ) : typeof file.content === 'string' && file.type === 'mermaid' ? (
+        <MermaidDiagram source={file.content} />
+      ) : typeof file.content === 'string' ? (
         <pre className="atlas-folder-document__source">
           <code>{file.content}</code>
         </pre>

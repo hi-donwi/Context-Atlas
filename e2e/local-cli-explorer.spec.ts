@@ -44,7 +44,11 @@ test.beforeAll(async () => {
   await writeFile(join(fixtureRoot, 'atlas.json'), JSON.stringify({ title: 'Browser guide' }));
   await writeFile(
     join(fixtureRoot, 'README.md'),
-    '# Browser guide\n\nUnsafe tags stay visible as source: <script>window.sourceRan = true</script>',
+    '# Reading this folder\n\n> **In plain words:** the document is formatted.\n\n' +
+      '```mermaid\nflowchart LR\n  A[Markdown source] --> B[Rendered diagram]\n```\n\n' +
+      '```mermaid\nnot-a-supported-diagram\n```\n\n' +
+      'Unsafe tags stay visible as source: <script>window.sourceRan = true</script>\n\n' +
+      '![remote image](https://example.invalid/image.png)',
   );
   await writeFile(join(fixtureRoot, 'docs', 'note.txt'), 'A nested local note about orchids.');
   await writeFile(join(fixtureRoot, 'image.png'), Buffer.from([0, 1, 2, 255]));
@@ -75,6 +79,12 @@ test('browse a local folder with keyboard controls, safe previews, and mobile re
 
   await page.goto(cliUrl);
   await expect(page.getByRole('heading', { name: 'Browser guide' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Reading this folder' })).toBeVisible();
+  await expect(page.getByText('In plain words:', { exact: false })).toBeVisible();
+  await expect(page.getByText('Image not loaded: remote image')).toBeVisible();
+  await expect(page.locator('.atlas-mermaid__svg svg')).toBeVisible();
+  await expect(page.getByText('This Mermaid diagram could not be rendered.')).toBeVisible();
+  await expect(page.getByText('flowchart LR', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('navigation', { name: 'Folder contents' })).toBeVisible();
   await expect(page.getByText(/Unsafe tags stay visible as source/)).toBeVisible();
   await expect(

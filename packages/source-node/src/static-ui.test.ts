@@ -43,6 +43,12 @@ describe('CLI UI static hosting', () => {
     expect(index.status).toBe(200);
     expect(index.headers.get('content-type')).toContain('text/html');
     expect(index.headers.get('content-security-policy')).toContain("default-src 'self'");
+    expect(index.headers.get('content-security-policy')).toContain(
+      "style-src 'self' 'unsafe-inline'",
+    );
+    expect(index.headers.get('content-security-policy')).not.toContain(
+      "script-src 'unsafe-inline'",
+    );
     expect(index.headers.get('access-control-allow-origin')).toBeNull();
     await expect(index.text()).resolves.toContain('<title>Atlas</title>');
     expect(script.status).toBe(200);

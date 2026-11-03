@@ -135,7 +135,7 @@ function statusTitle(status: number): string {
 function setSecurityHeaders(response: ServerResponse): void {
   response.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+    "default-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
   );
   response.setHeader('X-Content-Type-Options', 'nosniff');
   response.setHeader('Cache-Control', 'no-store');

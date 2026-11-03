@@ -119,7 +119,8 @@ export function FolderExplorer({ source }: FolderExplorerProps) {
               <p className="atlas-folder-explorer__eyebrow">Folder overview</p>
               <h2>Choose a file to inspect</h2>
               <p className="atlas-folder-explorer__muted">
-                Select a file from the folder contents. Text is shown as inert source.
+                Select a file from the folder contents. Markdown and Mermaid are rendered for
+                reading; other text stays inert.
               </p>
               <ul className="atlas-folder-explorer__cards">
                 {rootEntries.map((entry) => (
