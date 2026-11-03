@@ -4,6 +4,7 @@ import type { Entry } from '@context-atlas/core';
 export interface ExplorerLocation {
   readonly scopeId: string;
   readonly path: string;
+  readonly fragment?: string;
 }
 
 /** Prefer the conventional folder landing documents without selecting directories. */
@@ -16,18 +17,26 @@ export function findDefaultDocument(entries: readonly Entry[]): string | undefin
 }
 
 /** Encode a safe relative file path as a URL hash that survives page reloads. */
-export function formatExplorerLocation(scopeId: string, path: string): string {
+export function formatExplorerLocation(scopeId: string, path: string, fragment?: string): string {
   const normalizedPath = normalizeRelativePath(path);
-  return `#/${encodeURIComponent(scopeId)}/${normalizedPath
+  const route = `#/${encodeURIComponent(scopeId)}/${normalizedPath
     .split('/')
     .map((segment) => encodeURIComponent(segment))
     .join('/')}`;
+  return fragment === undefined || fragment === ''
+    ? route
+    : `${route}#${encodeURIComponent(fragment)}`;
 }
 
 /** Parse a URL hash, returning no selection for malformed or unsafe paths. */
 export function parseExplorerLocation(hash: string): ExplorerLocation | undefined {
   if (!hash.startsWith('#/')) return undefined;
-  const segments = hash.slice(2).split('/');
+  const routeAndFragment = hash.slice(2);
+  const fragmentIndex = routeAndFragment.indexOf('#');
+  const route = fragmentIndex === -1 ? routeAndFragment : routeAndFragment.slice(0, fragmentIndex);
+  const encodedFragment =
+    fragmentIndex === -1 ? undefined : routeAndFragment.slice(fragmentIndex + 1);
+  const segments = route.split('/');
   if (segments.length < 2 || segments.some((segment) => segment === '')) return undefined;
 
   try {
@@ -37,7 +46,10 @@ export function parseExplorerLocation(hash: string): ExplorerLocation | undefine
       .map((segment) => decodeURIComponent(segment))
       .join('/');
     if (scopeId === '' || normalizeRelativePath(path) !== path) return undefined;
-    return { scopeId, path };
+    if (encodedFragment === undefined || encodedFragment === '') return { scopeId, path };
+    const fragment = decodeURIComponent(encodedFragment);
+    if (fragment.length > 512) return undefined;
+    return { scopeId, path, fragment };
   } catch (error) {
     if (error instanceof URIError || error instanceof UnsafePathError) return undefined;
     throw error;

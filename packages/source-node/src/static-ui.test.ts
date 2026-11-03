@@ -46,6 +46,8 @@ describe('CLI UI static hosting', () => {
     expect(index.headers.get('content-security-policy')).toContain(
       "style-src 'self' 'unsafe-inline'",
     );
+    expect(index.headers.get('content-security-policy')).toContain("img-src 'self' blob:");
+    expect(index.headers.get('content-security-policy')).not.toContain('https:');
     expect(index.headers.get('content-security-policy')).not.toContain(
       "script-src 'unsafe-inline'",
     );

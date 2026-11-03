@@ -2,11 +2,45 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { deflateSync } from 'node:zlib';
 import { test, expect } from '@playwright/test';
 
 let fixtureRoot: string;
 let cliProcess: ChildProcessWithoutNullStreams;
 let cliUrl: string;
+
+function pngChunk(type: string, data: Buffer): Buffer {
+  const chunkType = Buffer.from(type, 'ascii');
+  const crcInput = Buffer.concat([chunkType, data]);
+  let crc = 0xffffffff;
+  for (const byte of crcInput) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc & 1) === 1 ? (crc >>> 1) ^ 0xedb88320 : crc >>> 1;
+    }
+  }
+
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(data.length);
+  const checksum = Buffer.alloc(4);
+  checksum.writeUInt32BE((crc ^ 0xffffffff) >>> 0);
+  return Buffer.concat([length, crcInput, checksum]);
+}
+
+function createPixelPng(): Buffer {
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(1, 0);
+  header.writeUInt32BE(1, 4);
+  header[8] = 8;
+  header[9] = 6;
+
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    pngChunk('IHDR', header),
+    pngChunk('IDAT', deflateSync(Buffer.from([0, 23, 110, 92, 255]))),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ]);
+}
 
 async function startCli(root: string): Promise<void> {
   const cliPath = resolve('apps/cli/dist/bin.js');
@@ -41,6 +75,7 @@ async function startCli(root: string): Promise<void> {
 test.beforeAll(async () => {
   fixtureRoot = await mkdtemp(join(tmpdir(), 'context-atlas-browser-fixture-'));
   await mkdir(join(fixtureRoot, 'docs'));
+  await mkdir(join(fixtureRoot, 'assets'));
   await writeFile(join(fixtureRoot, 'atlas.json'), JSON.stringify({ title: 'Browser guide' }));
   await writeFile(
     join(fixtureRoot, 'README.md'),
@@ -48,9 +83,20 @@ test.beforeAll(async () => {
       '```mermaid\nflowchart LR\n  A[Markdown source] --> B[Rendered diagram]\n```\n\n' +
       '```mermaid\nnot-a-supported-diagram\n```\n\n' +
       'Unsafe tags stay visible as source: <script>window.sourceRan = true</script>\n\n' +
+      '[Open the nested section](docs/note.md#Destination%20details) · [Blocked outside link](../outside.md)\n\n' +
+      '![local image](assets/pixel.png)\n\n' +
       '![remote image](https://example.invalid/image.png)',
   );
   await writeFile(join(fixtureRoot, 'docs', 'note.txt'), 'A nested local note about orchids.');
+  await writeFile(
+    join(fixtureRoot, 'docs', 'note.md'),
+    '# Nested note\n\n## Destination details\n\nSection content.\n\n' +
+      Array.from({ length: 24 }, (_, index) => `Additional local paragraph ${index + 1}.`).join(
+        '\n\n',
+      ) +
+      '\n\n[Back to README](../README.md)',
+  );
+  await writeFile(join(fixtureRoot, 'assets', 'pixel.png'), createPixelPng());
   await writeFile(join(fixtureRoot, 'image.png'), Buffer.from([0, 1, 2, 255]));
   await startCli(fixtureRoot);
 });
@@ -71,7 +117,9 @@ test('browse a local folder with keyboard controls, safe previews, and mobile re
   const externalRequests: string[] = [];
   const consoleErrors: string[] = [];
   page.on('request', (request) => {
-    if (!request.url().startsWith(cliUrl)) externalRequests.push(request.url());
+    if (!request.url().startsWith(cliUrl) && !request.url().startsWith('blob:')) {
+      externalRequests.push(request.url());
+    }
   });
   page.on('console', (message) => {
     if (message.type() === 'error') consoleErrors.push(message.text());
@@ -82,9 +130,16 @@ test('browse a local folder with keyboard controls, safe previews, and mobile re
   await expect(page.getByRole('heading', { name: 'Reading this folder' })).toBeVisible();
   await expect(page.getByText('In plain words:', { exact: false })).toBeVisible();
   await expect(page.getByText('Image not loaded: remote image')).toBeVisible();
+  const localImage = page.getByRole('img', { name: 'local image' });
+  await expect(localImage).toBeVisible();
+  await expect(localImage).toHaveAttribute('src', /^blob:/);
+  await expect(localImage).toHaveJSProperty('naturalWidth', 1);
   await expect(page.locator('.atlas-mermaid__svg svg')).toBeVisible();
   await expect(page.getByText('This Mermaid diagram could not be rendered.')).toBeVisible();
   await expect(page.getByText('flowchart LR', { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByText('Blocked outside link', { exact: true }).locator('xpath=ancestor::a'),
+  ).toHaveCount(0);
   await expect(page.getByRole('navigation', { name: 'Folder contents' })).toBeVisible();
   await expect(page.getByText(/Unsafe tags stay visible as source/)).toBeVisible();
   await expect(
@@ -93,6 +148,33 @@ test('browse a local folder with keyboard controls, safe previews, and mobile re
 
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Skip to document' })).toBeFocused();
+
+  await page.getByRole('link', { name: 'Open the nested section' }).click();
+  await expect(page.getByRole('heading', { name: 'Nested note' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Destination details' })).toHaveAttribute(
+    'id',
+    'destination-details',
+  );
+  await expect
+    .poll(() => page.evaluate(() => window.location.hash))
+    .toContain('#destination-details');
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.getElementById('destination-details')?.getBoundingClientRect().top,
+      ),
+    )
+    .toBeGreaterThan(0);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.getElementById('destination-details')?.getBoundingClientRect().top,
+      ),
+    )
+    .toBeLessThan(200);
+  await expect(page.locator('.atlas-folder-document__path')).toHaveText('docs/note.md');
+  await page.getByRole('link', { name: 'Back to README' }).click();
+  await expect(page.getByRole('heading', { name: 'Reading this folder' })).toBeVisible();
 
   const docsButton = page.getByRole('button', { name: 'Expand folder docs' });
   await docsButton.focus();

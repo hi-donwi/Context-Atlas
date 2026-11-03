@@ -63,7 +63,7 @@ export function useFolderExplorer(source) {
     expandedDirectoriesRef.current = expandedDirectories;
     selectedPathRef.current = selectedPath;
     const reloadSource = useCallback(() => setSourceAttempt((attempt) => attempt + 1), []);
-    const selectFile = useCallback(async (path, historyMode = 'push') => {
+    const selectFile = useCallback(async (path, historyMode = 'push', fragment) => {
         if (scopeId === null)
             return;
         const requestId = ++fileRequestId.current;
@@ -72,7 +72,7 @@ export function useFolderExplorer(source) {
         setFileError(null);
         setFileLoading(true);
         if (historyMode !== 'none') {
-            const nextHash = formatExplorerLocation(scopeId, path);
+            const nextHash = formatExplorerLocation(scopeId, path, fragment);
             if (window.location.hash !== nextHash) {
                 window.history[historyMode === 'push' ? 'pushState' : 'replaceState'](null, '', nextHash);
             }
@@ -143,7 +143,7 @@ export function useFolderExplorer(source) {
         initialSelectionHandled.current = true;
         const location = parseExplorerLocation(window.location.hash);
         if (location?.scopeId === scopeId) {
-            void selectFile(location.path, 'none');
+            void selectFile(location.path, 'none', location.fragment);
             return;
         }
         const defaultPath = findDefaultDocument(rootEntries);
@@ -156,7 +156,7 @@ export function useFolderExplorer(source) {
         const handleHashChange = () => {
             const location = parseExplorerLocation(window.location.hash);
             if (location?.scopeId === scopeId) {
-                void selectFile(location.path, 'none');
+                void selectFile(location.path, 'none', location.fragment);
             }
             else {
                 fileRequestId.current += 1;
@@ -169,6 +169,21 @@ export function useFolderExplorer(source) {
         window.addEventListener('hashchange', handleHashChange);
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, [scopeId, selectFile]);
+    useEffect(() => {
+        if (scopeId === null || selectedPath === null || selectedFile === null || fileLoading)
+            return;
+        const location = parseExplorerLocation(window.location.hash);
+        if (location?.scopeId !== scopeId ||
+            location.path !== selectedPath ||
+            location.fragment === undefined) {
+            return;
+        }
+        const frame = window.requestAnimationFrame(() => {
+            const heading = [...document.querySelectorAll('.atlas-markdown [id]')].find((element) => element.id === location.fragment);
+            heading?.scrollIntoView({ block: 'start' });
+        });
+        return () => window.cancelAnimationFrame(frame);
+    }, [fileLoading, scopeId, selectedFile, selectedPath]);
     const loadDirectory = useCallback((path) => {
         if (scopeId === null)
             return;
@@ -236,7 +251,7 @@ export function useFolderExplorer(source) {
         reloadSource,
         toggleDirectory,
         retryDirectory: loadDirectory,
-        selectFile: (path) => void selectFile(path),
+        selectFile: (path, fragment) => void selectFile(path, 'push', fragment),
         retryFile,
     };
 }

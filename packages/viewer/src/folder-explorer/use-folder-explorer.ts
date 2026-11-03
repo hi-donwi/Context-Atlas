@@ -84,7 +84,7 @@ export interface FolderExplorerState {
   readonly reloadSource: () => void;
   readonly toggleDirectory: (path: string) => void;
   readonly retryDirectory: (path: string) => void;
-  readonly selectFile: (path: string) => void;
+  readonly selectFile: (path: string, fragment?: string) => void;
   readonly retryFile: () => void;
 }
 
@@ -114,7 +114,7 @@ export function useFolderExplorer(source: ContentSource): FolderExplorerState {
   const reloadSource = useCallback(() => setSourceAttempt((attempt) => attempt + 1), []);
 
   const selectFile = useCallback(
-    async (path: string, historyMode: HistoryMode = 'push') => {
+    async (path: string, historyMode: HistoryMode = 'push', fragment?: string) => {
       if (scopeId === null) return;
       const requestId = ++fileRequestId.current;
       setSelectedPath(path);
@@ -123,7 +123,7 @@ export function useFolderExplorer(source: ContentSource): FolderExplorerState {
       setFileLoading(true);
 
       if (historyMode !== 'none') {
-        const nextHash = formatExplorerLocation(scopeId, path);
+        const nextHash = formatExplorerLocation(scopeId, path, fragment);
         if (window.location.hash !== nextHash) {
           window.history[historyMode === 'push' ? 'pushState' : 'replaceState'](null, '', nextHash);
         }
@@ -194,7 +194,7 @@ export function useFolderExplorer(source: ContentSource): FolderExplorerState {
 
     const location = parseExplorerLocation(window.location.hash);
     if (location?.scopeId === scopeId) {
-      void selectFile(location.path, 'none');
+      void selectFile(location.path, 'none', location.fragment);
       return;
     }
     const defaultPath = findDefaultDocument(rootEntries);
@@ -206,7 +206,7 @@ export function useFolderExplorer(source: ContentSource): FolderExplorerState {
     const handleHashChange = (): void => {
       const location = parseExplorerLocation(window.location.hash);
       if (location?.scopeId === scopeId) {
-        void selectFile(location.path, 'none');
+        void selectFile(location.path, 'none', location.fragment);
       } else {
         fileRequestId.current += 1;
         setSelectedPath(null);
@@ -218,6 +218,26 @@ export function useFolderExplorer(source: ContentSource): FolderExplorerState {
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, [scopeId, selectFile]);
+
+  useEffect(() => {
+    if (scopeId === null || selectedPath === null || selectedFile === null || fileLoading) return;
+    const location = parseExplorerLocation(window.location.hash);
+    if (
+      location?.scopeId !== scopeId ||
+      location.path !== selectedPath ||
+      location.fragment === undefined
+    ) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      const heading = [...document.querySelectorAll<HTMLElement>('.atlas-markdown [id]')].find(
+        (element) => element.id === location.fragment,
+      );
+      heading?.scrollIntoView({ block: 'start' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [fileLoading, scopeId, selectedFile, selectedPath]);
 
   const loadDirectory = useCallback(
     (path: string): void => {
@@ -302,7 +322,7 @@ export function useFolderExplorer(source: ContentSource): FolderExplorerState {
     reloadSource,
     toggleDirectory,
     retryDirectory: loadDirectory,
-    selectFile: (path) => void selectFile(path),
+    selectFile: (path, fragment) => void selectFile(path, 'push', fragment),
     retryFile,
   };
 }

@@ -562,6 +562,27 @@
   font-size: 0.85em;
 }
 
+.atlas-markdown__image {
+  display: block;
+  max-inline-size: 100%;
+  block-size: auto;
+}
+
+.atlas-markdown h1,
+.atlas-markdown h2,
+.atlas-markdown h3,
+.atlas-markdown h4,
+.atlas-markdown h5,
+.atlas-markdown h6 {
+  scroll-margin-block-start: 1rem;
+}
+
+.atlas-markdown__link-unavailable {
+  color: var(--atlas-folder-muted);
+  text-decoration: underline dotted;
+  text-decoration-color: var(--atlas-folder-border);
+}
+
 .atlas-mermaid {
   max-inline-size: 100%;
   margin: 1.25rem 0;

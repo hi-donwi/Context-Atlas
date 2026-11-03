@@ -106,8 +106,16 @@ export function FolderExplorer({ source }: FolderExplorerProps) {
                 Retry opening file
               </button>
             </section>
-          ) : state.selectedFile !== null && state.selectedPath !== null ? (
-            <FolderDocument path={state.selectedPath} file={state.selectedFile} />
+          ) : state.selectedFile !== null &&
+            state.selectedPath !== null &&
+            state.scopeId !== null ? (
+            <FolderDocument
+              path={state.selectedPath}
+              file={state.selectedFile}
+              scopeId={state.scopeId}
+              source={source}
+              onNavigate={state.selectFile}
+            />
           ) : rootEntries.length === 0 ? (
             <section className="atlas-folder-explorer__state">
               <FolderPlus size={24} aria-hidden="true" />

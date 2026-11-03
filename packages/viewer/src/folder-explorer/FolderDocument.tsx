@@ -1,13 +1,16 @@
-import type { FileContent } from '@context-atlas/core';
+import type { ContentSource, FileContent } from '@context-atlas/core';
 import { MarkdownDocument } from './MarkdownDocument.js';
 import { MermaidDiagram } from './MermaidDiagram.js';
 
 interface FolderDocumentProps {
   readonly path: string;
   readonly file: FileContent;
+  readonly scopeId: string;
+  readonly source: ContentSource;
+  readonly onNavigate: (path: string, fragment?: string) => void;
 }
 
-export function FolderDocument({ path, file }: FolderDocumentProps) {
+export function FolderDocument({ path, file, scopeId, source, onNavigate }: FolderDocumentProps) {
   const name = path.split('/').at(-1) ?? path;
   const modified = file.mtime === undefined ? undefined : new Date(file.mtime);
   const modifiedLabel =
@@ -36,7 +39,13 @@ export function FolderDocument({ path, file }: FolderDocumentProps) {
         )}
       </dl>
       {typeof file.content === 'string' && file.type === 'markdown' ? (
-        <MarkdownDocument content={file.content} />
+        <MarkdownDocument
+          content={file.content}
+          path={path}
+          scopeId={scopeId}
+          source={source}
+          onNavigate={onNavigate}
+        />
       ) : typeof file.content === 'string' && file.type === 'mermaid' ? (
         <MermaidDiagram source={file.content} />
       ) : typeof file.content === 'string' ? (

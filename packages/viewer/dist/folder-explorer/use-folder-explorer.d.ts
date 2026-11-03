@@ -20,7 +20,7 @@ export interface FolderExplorerState {
     readonly reloadSource: () => void;
     readonly toggleDirectory: (path: string) => void;
     readonly retryDirectory: (path: string) => void;
-    readonly selectFile: (path: string) => void;
+    readonly selectFile: (path: string, fragment?: string) => void;
     readonly retryFile: () => void;
 }
 export declare function useFolderExplorer(source: ContentSource): FolderExplorerState;

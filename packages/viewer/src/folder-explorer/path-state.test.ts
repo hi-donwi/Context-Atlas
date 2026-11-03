@@ -36,10 +36,22 @@ describe('folder explorer path state', () => {
     });
   });
 
+  it('round-trips an encoded heading fragment with its document path', () => {
+    const hash = formatExplorerLocation('folder', 'docs/guide.md', 'details & examples');
+
+    expect(hash).toBe('#/folder/docs/guide.md#details%20%26%20examples');
+    expect(parseExplorerLocation(hash)).toEqual({
+      scopeId: 'folder',
+      path: 'docs/guide.md',
+      fragment: 'details & examples',
+    });
+  });
+
   it('ignores empty, incomplete, malformed, and unsafe URL hashes', () => {
     expect(parseExplorerLocation('')).toBeUndefined();
     expect(parseExplorerLocation('#/folder')).toBeUndefined();
     expect(parseExplorerLocation('#/folder/../private.md')).toBeUndefined();
     expect(parseExplorerLocation('#/folder/%E0%A4%A')).toBeUndefined();
+    expect(parseExplorerLocation('#/folder/docs/guide.md#%E0%A4%A')).toBeUndefined();
   });
 });
