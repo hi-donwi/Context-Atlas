@@ -123,7 +123,8 @@ or a model/UIDL builder. Those integrations can consume the same snapshot and vi
 without adding their runtime semantics to the generic graph.
 
 Read the [architecture](docs/architecture.md), [integration guide](docs/integration.md),
-[release specification](docs/specification.md), and [architectural decision](docs/adr/0001-derived-context-and-host-owned-edits.md).
+[release specification](docs/specification.md), [0.2 draft specification](docs/specification-0.2.md),
+and [architectural decision](docs/adr/0001-derived-context-and-host-owned-edits.md).
 
 ## Contribute
 
