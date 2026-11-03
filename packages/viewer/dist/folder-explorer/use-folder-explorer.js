@@ -1,5 +1,45 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { isExcludedPath, normalizeRelativePath, UnsafePathError, } from '@context-atlas/core';
 import { findDefaultDocument, formatExplorerLocation, parseExplorerLocation, } from './path-state.js';
+export function planChangedPaths(paths, cachedDirectories, expandedDirectories, selectedPath) {
+    const visibleDirectories = new Set([...cachedDirectories, ...expandedDirectories]);
+    const directories = new Set();
+    if (paths.length === 0) {
+        for (const directory of visibleDirectories)
+            directories.add(directory);
+        return {
+            directories: [...directories].sort(),
+            refreshSelectedFile: selectedPath !== null,
+        };
+    }
+    let refreshSelectedFile = false;
+    for (const path of paths) {
+        let normalizedPath;
+        try {
+            normalizedPath = normalizeRelativePath(path);
+            if (normalizedPath !== path) {
+                return planChangedPaths([], cachedDirectories, expandedDirectories, selectedPath);
+            }
+        }
+        catch (error) {
+            if (error instanceof UnsafePathError) {
+                return planChangedPaths([], cachedDirectories, expandedDirectories, selectedPath);
+            }
+            throw error;
+        }
+        if (isExcludedPath(normalizedPath))
+            continue;
+        const separator = normalizedPath.lastIndexOf('/');
+        directories.add(separator === -1 ? '' : normalizedPath.slice(0, separator));
+        if (visibleDirectories.has(normalizedPath))
+            directories.add(normalizedPath);
+        if (selectedPath !== null &&
+            (normalizedPath === selectedPath || selectedPath.startsWith(`${normalizedPath}/`))) {
+            refreshSelectedFile = true;
+        }
+    }
+    return { directories: [...directories].sort(), refreshSelectedFile };
+}
 export function useFolderExplorer(source) {
     const [sourceAttempt, setSourceAttempt] = useState(0);
     const [info, setInfo] = useState(null);
@@ -16,6 +56,12 @@ export function useFolderExplorer(source) {
     const [fileError, setFileError] = useState(null);
     const fileRequestId = useRef(0);
     const initialSelectionHandled = useRef(false);
+    const entriesByDirectoryRef = useRef(entriesByDirectory);
+    const expandedDirectoriesRef = useRef(expandedDirectories);
+    const selectedPathRef = useRef(selectedPath);
+    entriesByDirectoryRef.current = entriesByDirectory;
+    expandedDirectoriesRef.current = expandedDirectories;
+    selectedPathRef.current = selectedPath;
     const reloadSource = useCallback(() => setSourceAttempt((attempt) => attempt + 1), []);
     const selectFile = useCallback(async (path, historyMode = 'push') => {
         if (scopeId === null)
@@ -142,6 +188,18 @@ export function useFolderExplorer(source) {
             return next;
         }));
     }, [scopeId, source]);
+    useEffect(() => {
+        if (scopeId === null || source.watch === undefined)
+            return;
+        return source.watch((paths) => {
+            const plan = planChangedPaths(paths, new Set(Object.keys(entriesByDirectoryRef.current)), expandedDirectoriesRef.current, selectedPathRef.current);
+            for (const directory of plan.directories)
+                loadDirectory(directory);
+            const currentPath = selectedPathRef.current;
+            if (plan.refreshSelectedFile && currentPath !== null)
+                void selectFile(currentPath, 'none');
+        });
+    }, [loadDirectory, scopeId, selectFile, source]);
     const toggleDirectory = useCallback((path) => {
         if (scopeId === null)
             return;

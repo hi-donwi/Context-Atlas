@@ -62,7 +62,7 @@ own scope on every operation.
 | `list(scope, dir)`      | Returns one directory level for lazy tree navigation.                                                                                                                                                                                        |
 | `read(scope, path)`     | Returns content and metadata after scope and path checks.                                                                                                                                                                                    |
 | `search?(scope, query)` | Optionally returns ranked, bounded hits and snippets within that scope.                                                                                                                                                                      |
-| `watch?(onChange)`      | Optionally reports changed relative paths and returns an unsubscribe function.                                                                                                                                                               |
+| `watch?(onChange)`      | Optionally reports changed scope-relative paths and returns an unsubscribe function. Empty paths mean the whole scope may have changed.                                                                                                      |
 
 ## HTTP routes
 
@@ -75,10 +75,9 @@ are URL-encoded; `scope` is required except for `info`.
 | `GET /atlas/api/tree?scope=&dir=`  | Scope and optional relative directory        | One directory level.                                                                                      |
 | `GET /atlas/api/file?scope=&path=` | Scope and relative file path                 | File type, content, byte size, modification time, and content encoding.                                   |
 | `GET /atlas/api/search?scope=&q=`  | Scope and a trimmed query (1–200 characters) | Up to 20 ranked `SearchHit`s; each snippet is at most 240 characters and includes a matching line number. |
-| `GET /atlas/api/events`            | Server-sent events                           | Change notifications for the authorized source.                                                           |
+| `GET /atlas/api/events`            | None                                         | Same-origin `text/event-stream` change notifications for the authorized source.                           |
 
-The initial folder CLI implements the info, tree, file, and local search routes; events
-remain later work. Run `context-atlas [folder] [--port <port>]`; it defaults to the current
+The folder CLI implements the info, tree, file, local search, and change-event routes. Run `context-atlas [folder] [--port <port>]`; it defaults to the current
 directory and an available port. The CLI binds only to `127.0.0.1`, rejects unexpected
 `Host` values, sends no CORS permission, and uses `default-src 'self'`. Text responses are
 limited to 5 MiB. The file route returns JSON with an `encoding` field: `utf-8` for textual
@@ -97,9 +96,28 @@ metadata-only files remain excluded, and all paths are revalidated through the s
 existing scope and exclusion checks.
 
 The CLI builds an in-memory MiniSearch 7.2.0 index lazily on the first search. It is a
-process-local snapshot: file changes after index construction become visible after restarting
-the CLI. A later events phase may add live invalidation. Search never fetches remote resources
-or persists document content or the index to disk.
+process-local snapshot and is invalidated when the local watcher reports a change. Search never
+fetches remote resources or persists document content or the index to disk.
+
+### Phase 5 local change events
+
+`GET /atlas/api/events` returns a same-origin Server-Sent Events stream with `Content-Type:
+text/event-stream`. Each notification is an `event: change` whose `data` is a JSON object with
+one `paths` array. Paths are slash-separated, safe, relative to the one authorized folder
+scope, and filtered through the source's exclusions; absolute paths are never sent. An empty
+array (`{"paths":[]}`) means the client must revalidate the whole scope. Filesystem bursts are
+coalesced over a 100 ms quiet window. A batch contains at most 128 unique paths, each at most
+4096 characters; the server uses the same empty array when the platform does not supply a
+filename or when a payload must be safely bounded. Event IDs and durable replay are not used.
+
+The browser opens EventSource at the relative same-origin URL `/atlas/api/events` and relies on
+the browser's native reconnect behavior. Every `open`, including reconnect, triggers a full
+scope refresh to cover changes while disconnected. Named changes refresh loaded parent folders
+and the selected document when it matches; full refreshes revalidate all loaded folders and the
+selected document. The Node source invalidates its lazy search index when it observes a
+non-excluded change. Unsubscribing or closing a stream closes its watcher; CLI shutdown closes
+all remaining streams and watchers. Sources without `watch()` return a safe not-supported
+response (`501 EVENTS_NOT_SUPPORTED`) for the local events route.
 
 The CLI serves the built browser UI at `/` and its fixed bundle assets under `/assets/` from
 the same listener and origin. Static file resolution is limited to the installed UI bundle;

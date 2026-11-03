@@ -4,6 +4,7 @@ import { readFile, realpath, stat } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { FileSystemSourceError, type FileSystemSourceErrorCode } from './filesystem-source.js';
 import {
+  isExcludedPath,
   isPathWithinRoot,
   MAX_SEARCH_RESULTS,
   normalizeRelativePath,
@@ -16,6 +17,8 @@ import {
 const API_PREFIX = '/atlas/api/';
 const MAX_TEXT_RESPONSE_BYTES = 5 * 1024 * 1024;
 const MAX_UI_FILE_BYTES = 5 * 1024 * 1024;
+const MAX_EVENT_PATHS = 128;
+const MAX_EVENT_PATH_LENGTH = 4096;
 
 const UI_CONTENT_TYPES: Readonly<Record<string, string>> = {
   '.css': 'text/css; charset=utf-8',
@@ -31,7 +34,8 @@ type ApiErrorCode =
   | 'METHOD_NOT_ALLOWED'
   | 'ROUTE_NOT_FOUND'
   | 'INVALID_QUERY'
-  | 'SEARCH_NOT_SUPPORTED';
+  | 'SEARCH_NOT_SUPPORTED'
+  | 'EVENTS_NOT_SUPPORTED';
 
 interface ProblemDetails {
   readonly type: 'about:blank';
@@ -93,6 +97,8 @@ function errorDetails(code: ApiErrorCode): { readonly status: number; readonly d
       return { status: 400, detail: 'The query parameters are invalid.' };
     case 'SEARCH_NOT_SUPPORTED':
       return { status: 501, detail: 'Search is not supported by this source.' };
+    case 'EVENTS_NOT_SUPPORTED':
+      return { status: 501, detail: 'Change events are not supported by this source.' };
     case 'FILE_TOO_LARGE':
       return { status: 413, detail: 'The file exceeds the response size limit.' };
     case 'FILE_CHANGED':
@@ -223,6 +229,7 @@ async function routeRequest(
   expectedHost: string,
   baseUrl: string,
   uiRoot: UiRoot | undefined,
+  eventStreams: Map<ServerResponse, () => void>,
 ): Promise<void> {
   setSecurityHeaders(response);
 
@@ -291,6 +298,15 @@ async function routeRequest(
         return;
       }
 
+      case `${API_PREFIX}events`:
+        validateQuery(url, []);
+        if (source.watch === undefined) {
+          sendProblem(response, route, 'EVENTS_NOT_SUPPORTED');
+          return;
+        }
+        openEventStream(response, source, eventStreams);
+        return;
+
       default:
         if (uiRoot !== undefined && !route.startsWith(API_PREFIX)) {
           await serveUiRoute(url, response, uiRoot);
@@ -301,6 +317,84 @@ async function routeRequest(
   } catch (error) {
     sendProblem(response, route, sourceErrorCode(error));
   }
+}
+
+function normalizeEventPaths(paths: string[]): string[] | undefined {
+  if (!Array.isArray(paths)) return [];
+  if (paths.length === 0) return [];
+  if (paths.length > MAX_EVENT_PATHS) return [];
+
+  const safePaths = new Set<string>();
+  for (const path of paths) {
+    if (typeof path !== 'string' || path.length > MAX_EVENT_PATH_LENGTH) return [];
+    try {
+      const normalized = normalizeRelativePath(path);
+      if (normalized !== path) return [];
+      if (!isExcludedPath(normalized)) safePaths.add(normalized);
+    } catch (error) {
+      if (error instanceof UnsafePathError) return [];
+      throw error;
+    }
+  }
+  return safePaths.size === 0 ? undefined : [...safePaths].sort();
+}
+
+function openEventStream(
+  response: ServerResponse,
+  source: ContentSource,
+  eventStreams: Map<ServerResponse, () => void>,
+): void {
+  const pendingEvents: string[][] = [];
+  let ready = false;
+  let closed = false;
+  let unsubscribe = (): void => undefined;
+
+  const writeChange = (paths: string[]): void => {
+    const safePaths = normalizeEventPaths(paths);
+    if (safePaths === undefined) return;
+    if (!ready) {
+      pendingEvents.push(safePaths);
+      return;
+    }
+    if (!response.destroyed && !response.writableEnded) {
+      response.write(`event: change\ndata: ${JSON.stringify({ paths: safePaths })}\n\n`);
+    }
+  };
+
+  try {
+    unsubscribe = source.watch!(writeChange);
+  } catch {
+    sendProblem(response, `${API_PREFIX}events`, 'FILESYSTEM_ERROR');
+    return;
+  }
+
+  const cleanup = (): void => {
+    if (closed) return;
+    closed = true;
+    eventStreams.delete(response);
+    try {
+      unsubscribe();
+    } catch {
+      // A faulty source must not prevent the HTTP stream from being released.
+    }
+  };
+
+  response.statusCode = 200;
+  response.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  response.setHeader('Connection', 'keep-alive');
+  response.setHeader('X-Accel-Buffering', 'no');
+  response.flushHeaders();
+  eventStreams.set(response, cleanup);
+  response.once('close', cleanup);
+  response.once('error', cleanup);
+  if (response.destroyed || response.writableEnded) {
+    cleanup();
+    return;
+  }
+  response.write(': connected\n\n');
+  ready = true;
+  for (const paths of pendingEvents) writeChange(paths);
+  pendingEvents.length = 0;
 }
 
 async function openUiRoot(directory: string): Promise<UiRoot> {
@@ -401,11 +495,14 @@ export async function startLocalApiServer(
 
   let expectedHost = '';
   let baseUrl = '';
+  const eventStreams = new Map<ServerResponse, () => void>();
   const server: Server = createServer((request, response) => {
-    void routeRequest(request, response, source, expectedHost, baseUrl, uiRoot).catch(() => {
-      if (response.headersSent || response.destroyed) return;
-      sendProblem(response, '/', 'FILESYSTEM_ERROR');
-    });
+    void routeRequest(request, response, source, expectedHost, baseUrl, uiRoot, eventStreams).catch(
+      () => {
+        if (response.headersSent || response.destroyed) return;
+        sendProblem(response, '/', 'FILESYSTEM_ERROR');
+      },
+    );
   });
 
   await new Promise<void>((resolveListen, rejectListen) => {
@@ -425,13 +522,21 @@ export async function startLocalApiServer(
 
   expectedHost = `127.0.0.1:${address.port}`;
   baseUrl = `http://${expectedHost}`;
+  let closePromise: Promise<void> | undefined;
 
   return {
     url: baseUrl,
     port: address.port,
-    close: () =>
-      new Promise<void>((resolveClose, rejectClose) => {
+    close: () => {
+      if (closePromise !== undefined) return closePromise;
+      for (const [response, cleanup] of eventStreams) {
+        cleanup();
+        response.end();
+      }
+      closePromise = new Promise<void>((resolveClose, rejectClose) => {
         server.close((error) => (error ? rejectClose(error) : resolveClose()));
-      }),
+      });
+      return closePromise;
+    },
   };
 }

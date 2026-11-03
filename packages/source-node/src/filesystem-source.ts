@@ -1,6 +1,6 @@
-import { constants } from 'node:fs';
+import { constants, watch as watchFileSystem, type FSWatcher } from 'node:fs';
 import { open, readdir, realpath, stat } from 'node:fs/promises';
-import { basename, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import MiniSearch from 'minisearch';
 import {
   createFolderSourceInfo,
@@ -31,6 +31,8 @@ const MAX_TITLE_SCAN_BYTES = 64 * 1024;
 const MAX_RELATIVE_PATH_LENGTH = 4096;
 const SEARCH_INDEX_BATCH_SIZE = 64;
 const SEARCH_INDEX_BATCH_BYTES = 1024 * 1024;
+const WATCH_DEBOUNCE_MS = 100;
+const MAX_CHANGE_PATHS = 128;
 const TEXT_TYPES = new Set<FileType>([
   'markdown',
   'mermaid',
@@ -433,6 +435,176 @@ export class FileSystemContentSource implements ContentSource {
     }
 
     return hits;
+  }
+
+  watch(onChange: (paths: string[]) => void): () => void {
+    const watchers = new Map<string, FSWatcher>();
+    const pendingPaths = new Set<string>();
+    let pendingFullRefresh = false;
+    let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+    let stopped = false;
+    let reconcileTask = Promise.resolve();
+    let ambiguousDirectories = new Set<string>();
+
+    const flush = (): void => {
+      debounceTimer = undefined;
+      if (stopped) return;
+      const paths = pendingFullRefresh ? [] : [...pendingPaths].sort();
+      pendingFullRefresh = false;
+      pendingPaths.clear();
+      onChange(paths);
+    };
+
+    const scheduleFlush = (): void => {
+      if (debounceTimer !== undefined) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(flush, WATCH_DEBOUNCE_MS);
+    };
+
+    const queueVisiblePath = (scopePath: string): void => {
+      void resolveWithinScope(this.rootPath, scopePath)
+        .then(async (resolved) => {
+          const entryStat = await stat(resolved.absolutePath);
+          if (entryStat.isFile() || entryStat.isDirectory()) queueChange(scopePath);
+        })
+        .catch(() => queueChange(undefined));
+    };
+
+    const queueChange = (scopePath: string | undefined): void => {
+      if (stopped) return;
+      this.searchIndexPromise = undefined;
+      if (scopePath === undefined || scopePath.length > MAX_RELATIVE_PATH_LENGTH) {
+        pendingFullRefresh = true;
+        pendingPaths.clear();
+      } else if (!pendingFullRefresh) {
+        pendingPaths.add(scopePath);
+        if (pendingPaths.size > MAX_CHANGE_PATHS) {
+          pendingFullRefresh = true;
+          pendingPaths.clear();
+        }
+      }
+      scheduleFlush();
+    };
+
+    const addWatcher = (absoluteDirectory: string, scopeDirectory: string): void => {
+      if (stopped || watchers.has(absoluteDirectory)) return;
+      try {
+        const watcher = watchFileSystem(absoluteDirectory, (eventType, filename) => {
+          if (filename === null || ambiguousDirectories.has(absoluteDirectory)) {
+            queueChange(undefined);
+          } else {
+            const name = filename.toString();
+            if (name === basename(absoluteDirectory)) {
+              queueChange(undefined);
+            } else {
+              const path = scopeDirectory === '' ? name : `${scopeDirectory}/${name}`;
+              if (path.length > MAX_RELATIVE_PATH_LENGTH) {
+                queueChange(undefined);
+              } else {
+                try {
+                  const safePath = normalizeRelativePath(path);
+                  if (!isExcludedPath(safePath)) queueVisiblePath(safePath);
+                } catch (error) {
+                  if (error instanceof UnsafePathError) queueChange(undefined);
+                  else throw error;
+                }
+              }
+            }
+          }
+
+          if (eventType === 'rename' || filename === null) {
+            reconcileTask = reconcileTask.then(reconcileWatchers).catch(() => {
+              queueChange(undefined);
+            });
+          }
+        });
+        watchers.set(absoluteDirectory, watcher);
+        watcher.on('error', () => {
+          watcher.close();
+          watchers.delete(absoluteDirectory);
+          queueChange(undefined);
+        });
+      } catch {
+        queueChange(undefined);
+      }
+    };
+
+    const reconcileWatchers = async (): Promise<void> => {
+      if (stopped) return;
+      const directories = new Map<string, string>([[this.rootPath, '']]);
+      const nextAmbiguousDirectories = new Set<string>();
+      const visited = new Set<string>([this.rootPath]);
+      const pending = [{ absolutePath: this.rootPath, scopePath: '', ambiguous: false }];
+
+      while (pending.length > 0) {
+        const directory = pending.pop()!;
+        let children;
+        try {
+          children = await readdir(directory.absolutePath, { withFileTypes: true });
+        } catch {
+          continue;
+        }
+
+        for (const child of children) {
+          if (!child.isDirectory() && !child.isSymbolicLink()) continue;
+          const path =
+            directory.scopePath === '' ? child.name : `${directory.scopePath}/${child.name}`;
+          if (path.length > MAX_RELATIVE_PATH_LENGTH || isExcludedPath(path)) continue;
+          try {
+            normalizeRelativePath(path);
+          } catch {
+            continue;
+          }
+
+          let resolved: ResolvedPath;
+          let childStat;
+          try {
+            resolved = await resolveWithinScope(this.rootPath, path);
+            childStat = await stat(resolved.absolutePath);
+          } catch {
+            continue;
+          }
+          if (!childStat.isDirectory()) {
+            if (child.isSymbolicLink() && resolved.scopePath !== path && childStat.isFile()) {
+              nextAmbiguousDirectories.add(directory.absolutePath);
+              nextAmbiguousDirectories.add(dirname(resolved.absolutePath));
+            }
+            continue;
+          }
+
+          const ambiguous = directory.ambiguous || resolved.scopePath !== path;
+          if (ambiguous) nextAmbiguousDirectories.add(resolved.absolutePath);
+          if (visited.has(resolved.absolutePath)) {
+            nextAmbiguousDirectories.add(resolved.absolutePath);
+            continue;
+          }
+          const scopePath = toScopePath(this.rootPath, resolved.absolutePath);
+          visited.add(resolved.absolutePath);
+          directories.set(resolved.absolutePath, scopePath);
+          pending.push({ absolutePath: resolved.absolutePath, scopePath, ambiguous });
+        }
+      }
+
+      if (stopped) return;
+      ambiguousDirectories = nextAmbiguousDirectories;
+      for (const [absolutePath, scopePath] of directories) addWatcher(absolutePath, scopePath);
+      for (const [absolutePath, watcher] of watchers) {
+        if (!directories.has(absolutePath)) {
+          watcher.close();
+          watchers.delete(absolutePath);
+        }
+      }
+    };
+
+    addWatcher(this.rootPath, '');
+    reconcileTask = reconcileTask.then(reconcileWatchers).catch(() => queueChange(undefined));
+
+    return () => {
+      stopped = true;
+      if (debounceTimer !== undefined) clearTimeout(debounceTimer);
+      pendingPaths.clear();
+      for (const watcher of watchers.values()) watcher.close();
+      watchers.clear();
+    };
   }
 
   private async getSearchIndex(): Promise<MiniSearch<SearchDocument>> {

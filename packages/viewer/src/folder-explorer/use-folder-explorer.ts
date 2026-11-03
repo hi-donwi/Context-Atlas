@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ContentSource, Entry, FileContent, SourceInfo } from '@context-atlas/core';
+import {
+  isExcludedPath,
+  normalizeRelativePath,
+  UnsafePathError,
+  type ContentSource,
+  type Entry,
+  type FileContent,
+  type SourceInfo,
+} from '@context-atlas/core';
 import {
   findDefaultDocument,
   formatExplorerLocation,
@@ -7,6 +15,58 @@ import {
 } from './path-state.js';
 
 type HistoryMode = 'push' | 'replace' | 'none';
+
+interface ChangeRefreshPlan {
+  readonly directories: string[];
+  readonly refreshSelectedFile: boolean;
+}
+
+export function planChangedPaths(
+  paths: readonly string[],
+  cachedDirectories: ReadonlySet<string>,
+  expandedDirectories: ReadonlySet<string>,
+  selectedPath: string | null,
+): ChangeRefreshPlan {
+  const visibleDirectories = new Set([...cachedDirectories, ...expandedDirectories]);
+  const directories = new Set<string>();
+
+  if (paths.length === 0) {
+    for (const directory of visibleDirectories) directories.add(directory);
+    return {
+      directories: [...directories].sort(),
+      refreshSelectedFile: selectedPath !== null,
+    };
+  }
+
+  let refreshSelectedFile = false;
+  for (const path of paths) {
+    let normalizedPath: string;
+    try {
+      normalizedPath = normalizeRelativePath(path);
+      if (normalizedPath !== path) {
+        return planChangedPaths([], cachedDirectories, expandedDirectories, selectedPath);
+      }
+    } catch (error) {
+      if (error instanceof UnsafePathError) {
+        return planChangedPaths([], cachedDirectories, expandedDirectories, selectedPath);
+      }
+      throw error;
+    }
+    if (isExcludedPath(normalizedPath)) continue;
+
+    const separator = normalizedPath.lastIndexOf('/');
+    directories.add(separator === -1 ? '' : normalizedPath.slice(0, separator));
+    if (visibleDirectories.has(normalizedPath)) directories.add(normalizedPath);
+    if (
+      selectedPath !== null &&
+      (normalizedPath === selectedPath || selectedPath.startsWith(`${normalizedPath}/`))
+    ) {
+      refreshSelectedFile = true;
+    }
+  }
+
+  return { directories: [...directories].sort(), refreshSelectedFile };
+}
 
 export interface FolderExplorerState {
   readonly info: SourceInfo | null;
@@ -44,6 +104,12 @@ export function useFolderExplorer(source: ContentSource): FolderExplorerState {
   const [fileError, setFileError] = useState<string | null>(null);
   const fileRequestId = useRef(0);
   const initialSelectionHandled = useRef(false);
+  const entriesByDirectoryRef = useRef(entriesByDirectory);
+  const expandedDirectoriesRef = useRef(expandedDirectories);
+  const selectedPathRef = useRef(selectedPath);
+  entriesByDirectoryRef.current = entriesByDirectory;
+  expandedDirectoriesRef.current = expandedDirectories;
+  selectedPathRef.current = selectedPath;
 
   const reloadSource = useCallback(() => setSourceAttempt((attempt) => attempt + 1), []);
 
@@ -179,6 +245,22 @@ export function useFolderExplorer(source: ContentSource): FolderExplorerState {
     },
     [scopeId, source],
   );
+
+  useEffect(() => {
+    if (scopeId === null || source.watch === undefined) return;
+
+    return source.watch((paths) => {
+      const plan = planChangedPaths(
+        paths,
+        new Set(Object.keys(entriesByDirectoryRef.current)),
+        expandedDirectoriesRef.current,
+        selectedPathRef.current,
+      );
+      for (const directory of plan.directories) loadDirectory(directory);
+      const currentPath = selectedPathRef.current;
+      if (plan.refreshSelectedFile && currentPath !== null) void selectFile(currentPath, 'none');
+    });
+  }, [loadDirectory, scopeId, selectFile, source]);
 
   const toggleDirectory = useCallback(
     (path: string): void => {

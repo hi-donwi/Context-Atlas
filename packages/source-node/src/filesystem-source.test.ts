@@ -228,4 +228,70 @@ describe('openFolderSource', () => {
       { path: 'later.txt', line: 1 },
     ]);
   });
+
+  it('coalesces safe changed paths and invalidates the lazy search index', async () => {
+    await mkdir(join(root, 'docs'));
+    await writeFile(join(root, 'first.txt'), 'old content');
+    await writeFile(join(root, 'docs', 'second.txt'), 'old content');
+    const source = await openFolderSource(root);
+    await expect(source.search!('folder', 'freshneedle')).resolves.toEqual([]);
+
+    const nextChange = new Promise<string[]>((resolveChange) => {
+      const unsubscribe = source.watch!((paths) => {
+        unsubscribe();
+        resolveChange(paths);
+      });
+    });
+    await Promise.all([
+      writeFile(join(root, 'first.txt'), 'freshneedle in first file'),
+      writeFile(join(root, 'docs', 'second.txt'), 'freshneedle in second file'),
+    ]);
+
+    const paths = await nextChange;
+    expect(paths).toContain('first.txt');
+    expect(paths).toContain('docs/second.txt');
+    expect(paths.every((path) => !path.startsWith('/') && !path.includes('\\'))).toBe(true);
+    await expect(source.search!('folder', 'freshneedle')).resolves.toHaveLength(2);
+  });
+
+  it('does not report excluded changes and stops reporting after unsubscribe', async () => {
+    await mkdir(join(root, '.git'));
+    await mkdir(join(root, 'node_modules'));
+    await writeFile(join(outside, 'secret.md'), 'private');
+    const source = await openFolderSource(root);
+    const changes: string[][] = [];
+    const unsubscribe = source.watch!((paths) => changes.push(paths));
+
+    await writeFile(join(root, '.git', 'secret.md'), 'private');
+    await writeFile(join(root, 'node_modules', 'secret.md'), 'private');
+    await symlink(join(outside, 'secret.md'), join(root, 'external.md'));
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 200));
+    expect(changes.flat()).toEqual([]);
+
+    unsubscribe();
+    const reportedBeforeUnsubscribe = changes.length;
+    await writeFile(join(root, 'ordinary.txt'), 'visible');
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 200));
+    expect(changes).toHaveLength(reportedBeforeUnsubscribe);
+  });
+
+  it('uses a full refresh when a changed directory has multiple in-scope symlink paths', async () => {
+    await mkdir(join(root, 'target'));
+    await writeFile(join(root, 'target', 'guide.md'), 'before');
+    await symlink(join(root, 'target'), join(root, 'alias'));
+    await symlink(join(root, 'target', 'guide.md'), join(root, 'guide-alias.md'));
+    const source = await openFolderSource(root);
+    let unsubscribe = (): void => undefined;
+    const nextChange = new Promise<string[]>((resolveChange) => {
+      unsubscribe = source.watch!((paths) => {
+        unsubscribe();
+        resolveChange(paths);
+      });
+    });
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 50));
+
+    await writeFile(join(root, 'target', 'guide.md'), 'after');
+
+    await expect(nextChange).resolves.toEqual([]);
+  });
 });

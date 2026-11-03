@@ -8,6 +8,7 @@ import type {
   SourceInfo,
 } from '@context-atlas/core';
 import {
+  isExcludedPath,
   MAX_SEARCH_SNIPPET_CHARS,
   normalizeRelativePath,
   UnsafePathError,
@@ -33,6 +34,16 @@ const FILE_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 const SCOPE_PROFILES: ReadonlySet<string> = new Set(['folder', 'workspace', 'host']);
+const MAX_EVENT_PATHS = 128;
+const MAX_EVENT_PATH_LENGTH = 4096;
+
+interface ChangeEventSource {
+  onopen: ((event: Event) => void) | null;
+  addEventListener(type: 'change', listener: (event: MessageEvent<string>) => void): void;
+  close(): void;
+}
+
+type ChangeEventSourceFactory = (url: string) => ChangeEventSource;
 
 /** A safe protocol error returned when the local API response does not match its contract. */
 export class LocalApiProtocolError extends Error {
@@ -182,6 +193,33 @@ function parseSearchHit(value: unknown): SearchHit {
   return value as unknown as SearchHit;
 }
 
+function parseChangePaths(data: string): string[] {
+  let value: unknown;
+  try {
+    value = JSON.parse(data) as unknown;
+  } catch {
+    return [];
+  }
+  if (!isRecord(value) || !Array.isArray(value.paths) || value.paths.length > MAX_EVENT_PATHS) {
+    return [];
+  }
+  if (value.paths.length === 0) return [];
+
+  const paths = new Set<string>();
+  for (const path of value.paths) {
+    if (typeof path !== 'string' || path.length > MAX_EVENT_PATH_LENGTH) return [];
+    try {
+      const normalized = normalizeRelativePath(path);
+      if (normalized !== path) return [];
+      if (!isExcludedPath(normalized)) paths.add(normalized);
+    } catch (error) {
+      if (error instanceof UnsafePathError) return [];
+      throw error;
+    }
+  }
+  return [...paths].sort();
+}
+
 function safeProblem(value: unknown, status: number): LocalApiRequestError {
   const code =
     isRecord(value) && typeof value.code === 'string' && /^[A-Z0-9_]{1,64}$/.test(value.code)
@@ -219,7 +257,11 @@ function createRequester(fetcher: typeof fetch) {
 }
 
 /** Create a browser-safe `ContentSource` backed only by the same-origin local CLI API. */
-export function createApiContentSource(fetcher: typeof fetch = fetch): ContentSource {
+export function createApiContentSource(
+  fetcher: typeof fetch = fetch,
+  eventSourceFactory: ChangeEventSourceFactory = (url) =>
+    new EventSource(url) as unknown as ChangeEventSource,
+): ContentSource {
   const request = createRequester(fetcher);
 
   return {
@@ -244,6 +286,23 @@ export function createApiContentSource(fetcher: typeof fetch = fetch): ContentSo
       const value = await request(`${API_PREFIX}/search?${params.toString()}`);
       if (!Array.isArray(value)) throw new LocalApiProtocolError();
       return value.map(parseSearchHit);
+    },
+
+    watch(onChange: (paths: string[]) => void): () => void {
+      const eventSource = eventSourceFactory(`${API_PREFIX}/events`);
+      let active = true;
+      eventSource.onopen = () => {
+        if (active) onChange([]);
+      };
+      eventSource.addEventListener('change', (event) => {
+        if (active) onChange(parseChangePaths(event.data));
+      });
+
+      return () => {
+        if (!active) return;
+        active = false;
+        eventSource.close();
+      };
     },
   };
 }

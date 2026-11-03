@@ -2,7 +2,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { request as httpRequest } from 'node:http';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ContentSource } from '@context-atlas/core';
 import { openFolderSource } from './filesystem-source.js';
 import { startLocalApiServer } from './server.js';
@@ -207,6 +207,118 @@ describe('startLocalApiServer', () => {
       await expect(response.json()).resolves.toMatchObject({ code: 'SEARCH_NOT_SUPPORTED' });
     } finally {
       await noSearchServer.close();
+    }
+  });
+
+  it('serves coalesced change events as same-origin server-sent events', async () => {
+    const folderSource = await openFolderSource(root);
+    let publishChange: ((paths: string[]) => void) | undefined;
+    const sourceWithWatch: ContentSource = {
+      describe: () => folderSource.describe(),
+      list: (scopeId, directory) => folderSource.list(scopeId, directory),
+      read: (scopeId, path) => folderSource.read(scopeId, path),
+      watch: (onChange) => {
+        publishChange = onChange;
+        return vi.fn();
+      },
+    };
+    const eventsServer = await startLocalApiServer(sourceWithWatch);
+    const controller = new AbortController();
+
+    try {
+      const response = await fetch(`${eventsServer.url}/atlas/api/events`, {
+        signal: controller.signal,
+      });
+      const reader = response.body?.getReader();
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toContain('text/event-stream');
+      expect(response.headers.get('cache-control')).toBe('no-store');
+      expect(reader).toBeDefined();
+      const decoder = new TextDecoder();
+      await expect(reader!.read()).resolves.toMatchObject({
+        done: false,
+        value: expect.any(Uint8Array),
+      });
+
+      publishChange?.(['docs/guide.md']);
+      const event = await reader!.read();
+      expect(decoder.decode(event.value)).toContain(
+        'event: change\ndata: {"paths":["docs/guide.md"]}\n\n',
+      );
+      controller.abort();
+      await reader!.cancel().catch(() => undefined);
+    } finally {
+      controller.abort();
+      await eventsServer.close();
+    }
+  });
+
+  it('validates the events route and closes its watcher on client disconnect and shutdown', async () => {
+    const folderSource = await openFolderSource(root);
+    const unsubscribe = vi.fn();
+    const watch = vi.fn((_onChange: (paths: string[]) => void) => unsubscribe);
+    const sourceWithWatch: ContentSource = {
+      describe: () => folderSource.describe(),
+      list: (scopeId, directory) => folderSource.list(scopeId, directory),
+      read: (scopeId, path) => folderSource.read(scopeId, path),
+      watch,
+    };
+    const eventsServer = await startLocalApiServer(sourceWithWatch);
+
+    try {
+      const invalid = await fetch(`${eventsServer.url}/atlas/api/events?scope=folder`);
+      expect(invalid.status).toBe(400);
+      expect(watch).not.toHaveBeenCalled();
+
+      const wrongHost = await getWithHost(
+        `${eventsServer.url}/atlas/api/events`,
+        'attacker.example',
+      );
+      expect(wrongHost.status).toBe(403);
+      expect(watch).not.toHaveBeenCalled();
+      const post = await fetch(`${eventsServer.url}/atlas/api/events`, { method: 'POST' });
+      expect(post.status).toBe(405);
+      expect(post.headers.get('allow')).toBe('GET');
+      expect(watch).not.toHaveBeenCalled();
+
+      const controller = new AbortController();
+      const response = await fetch(`${eventsServer.url}/atlas/api/events`, {
+        signal: controller.signal,
+      });
+      const reader = response.body?.getReader();
+      await reader?.read();
+      controller.abort();
+      await vi.waitFor(() => expect(unsubscribe).toHaveBeenCalledTimes(1));
+
+      const secondController = new AbortController();
+      const secondResponse = await fetch(`${eventsServer.url}/atlas/api/events`, {
+        signal: secondController.signal,
+      });
+      await secondResponse.body?.getReader().read();
+      await eventsServer.close();
+      await vi.waitFor(() => expect(unsubscribe).toHaveBeenCalledTimes(2));
+      secondController.abort();
+    } finally {
+      await eventsServer.close();
+    }
+  });
+
+  it('returns a safe unsupported response when a source has no watch method', async () => {
+    const folderSource = await openFolderSource(root);
+    const sourceWithoutWatch: ContentSource = {
+      describe: () => folderSource.describe(),
+      list: (scopeId, directory) => folderSource.list(scopeId, directory),
+      read: (scopeId, path) => folderSource.read(scopeId, path),
+    };
+    const noEventsServer = await startLocalApiServer(sourceWithoutWatch);
+
+    try {
+      const response = await fetch(`${noEventsServer.url}/atlas/api/events`);
+
+      expect(response.status).toBe(501);
+      await expect(response.json()).resolves.toMatchObject({ code: 'EVENTS_NOT_SUPPORTED' });
+    } finally {
+      await noEventsServer.close();
     }
   });
 });

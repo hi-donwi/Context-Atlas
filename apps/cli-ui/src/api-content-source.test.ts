@@ -174,4 +174,31 @@ describe('createApiContentSource', () => {
     await expect(source.describe()).rejects.toBeInstanceOf(LocalApiProtocolError);
     await expect(source.read('folder', 'image.png')).rejects.toBeInstanceOf(LocalApiProtocolError);
   });
+
+  it('watches same-origin change events and refreshes fully whenever EventSource opens', () => {
+    let changeListener: ((event: MessageEvent<string>) => void) | undefined;
+    const eventSource = {
+      onopen: null as ((event: Event) => void) | null,
+      addEventListener: (_type: 'change', listener: (event: MessageEvent<string>) => void) => {
+        changeListener = listener;
+      },
+      close: vi.fn(),
+    };
+    const createEventSource = vi.fn((_url: string) => eventSource);
+    const source = createApiContentSource(vi.fn<typeof fetch>(), createEventSource);
+    const onChange = vi.fn();
+
+    const unsubscribe = source.watch!(onChange);
+    expect(createEventSource).toHaveBeenCalledWith('/atlas/api/events');
+    eventSource.onopen?.(new Event('open'));
+    changeListener?.({ data: '{"paths":["docs/guide.md"]}' } as MessageEvent<string>);
+    changeListener?.({ data: '{"paths":["../outside.md"]}' } as MessageEvent<string>);
+    eventSource.onopen?.(new Event('open'));
+
+    expect(onChange.mock.calls).toEqual([[[]], [['docs/guide.md']], [[]], [[]]]);
+    unsubscribe();
+    expect(eventSource.close).toHaveBeenCalledOnce();
+    eventSource.onopen?.(new Event('open'));
+    expect(onChange).toHaveBeenCalledTimes(4);
+  });
 });

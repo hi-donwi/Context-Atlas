@@ -1,4 +1,9 @@
-import type { ContentSource, Entry, FileContent, SourceInfo } from '@context-atlas/core';
+import { type ContentSource, type Entry, type FileContent, type SourceInfo } from '@context-atlas/core';
+interface ChangeRefreshPlan {
+    readonly directories: string[];
+    readonly refreshSelectedFile: boolean;
+}
+export declare function planChangedPaths(paths: readonly string[], cachedDirectories: ReadonlySet<string>, expandedDirectories: ReadonlySet<string>, selectedPath: string | null): ChangeRefreshPlan;
 export interface FolderExplorerState {
     readonly info: SourceInfo | null;
     readonly scopeId: string | null;
@@ -19,3 +24,4 @@ export interface FolderExplorerState {
     readonly retryFile: () => void;
 }
 export declare function useFolderExplorer(source: ContentSource): FolderExplorerState;
+export {};

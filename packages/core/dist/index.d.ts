@@ -80,7 +80,10 @@ export interface ContentSource {
     read(scopeId: string, path: string): Promise<FileContent>;
     /** Optionally search within one authorized scope and return ranked results. */
     search?(scopeId: string, query: string): Promise<SearchHit[]>;
-    /** Optionally report changed relative paths and return an unsubscribe function. */
+    /**
+     * Optionally report changed safe paths relative to the authorized scope and return an
+     * unsubscribe function. An empty path list means the entire scope may have changed.
+     */
     watch?(onChange: (paths: string[]) => void): () => void;
 }
 export { isExcludedPath, isMetadataOnly, MAX_FILE_SIZE_BYTES } from './exclusions.js';
