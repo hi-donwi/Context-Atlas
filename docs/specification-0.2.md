@@ -62,29 +62,67 @@ own scope on every operation.
 | `list(scope, dir)`      | Returns one directory level for lazy tree navigation.                                                                                                                                                                                        |
 | `read(scope, path)`     | Returns content and metadata after scope and path checks.                                                                                                                                                                                    |
 | `search?(scope, query)` | Optionally returns ranked, bounded hits and snippets within that scope.                                                                                                                                                                      |
-| `watch?(onChange)`      | Optionally reports changed relative paths and returns an unsubscribe function.                                                                                                                                                               |
+| `watch?(onChange)`      | Optionally reports changed scope-relative paths and returns an unsubscribe function. Empty paths mean the whole scope may have changed.                                                                                                      |
 
 ## HTTP routes
 
 The CLI source and a host HTTP source implement the same read-only route set. Query values
 are URL-encoded; `scope` is required except for `info`.
 
-| Method and route                   | Parameters                            | Response                                                                                      |
-| ---------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `GET /atlas/api/info`              | None                                  | Source title, profile, scopes, and repository revisions.                                      |
-| `GET /atlas/api/tree?scope=&dir=`  | Scope and optional relative directory | One directory level.                                                                          |
-| `GET /atlas/api/file?scope=&path=` | Scope and relative file path          | File type, content, byte size, modification time, and content encoding.                       |
-| `GET /atlas/api/search?scope=&q=`  | Scope and query                       | Ranked hits with bounded snippets; a MiniSearch candidate runs server-side within that scope. |
-| `GET /atlas/api/events`            | Server-sent events                    | Change notifications for the authorized source.                                               |
+| Method and route                   | Parameters                                   | Response                                                                                                  |
+| ---------------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `GET /atlas/api/info`              | None                                         | Source title, profile, scopes, and repository revisions.                                                  |
+| `GET /atlas/api/tree?scope=&dir=`  | Scope and optional relative directory        | One directory level.                                                                                      |
+| `GET /atlas/api/file?scope=&path=` | Scope and relative file path                 | File type, content, byte size, modification time, and content encoding.                                   |
+| `GET /atlas/api/search?scope=&q=`  | Scope and a trimmed query (1–200 characters) | Up to 20 ranked `SearchHit`s; each snippet is at most 240 characters and includes a matching line number. |
+| `GET /atlas/api/events`            | None                                         | Same-origin `text/event-stream` change notifications for the authorized source.                           |
 
-The initial folder CLI implements only the info, tree, and file routes; search and events
-remain later work. Run `context-atlas [folder] [--port <port>]`; it defaults to the current
+The folder CLI implements the info, tree, file, local search, and change-event routes. Run `context-atlas [folder] [--port <port>]`; it defaults to the current
 directory and an available port. The CLI binds only to `127.0.0.1`, rejects unexpected
 `Host` values, sends no CORS permission, and uses `default-src 'self'`. Text responses are
 limited to 5 MiB. The file route returns JSON with an `encoding` field: `utf-8` for textual
 content and `base64` for binary content. Errors use RFC 9457 `application/problem+json`
 with a stable `code`; stack traces and absolute paths are not returned. Routes do not accept
 write requests.
+
+### Phase 4 local search
+
+The Node folder source implements the optional `ContentSource.search` operation and the CLI
+exposes it as `GET /atlas/api/search?scope=&q=`. The query is trimmed and must contain 1–200
+characters; unknown or repeated parameters are rejected. Results are ranked within the one
+authorized folder scope and capped at 20, with a matching excerpt of at most 240 characters
+and a one-based line number. Only recognized text file families are indexed; binary and
+metadata-only files remain excluded, and all paths are revalidated through the source's
+existing scope and exclusion checks.
+
+The CLI builds an in-memory MiniSearch 7.2.0 index lazily on the first search. It is a
+process-local snapshot and is invalidated when the local watcher reports a change. Search never
+fetches remote resources or persists document content or the index to disk.
+
+### Phase 5 local change events
+
+`GET /atlas/api/events` returns a same-origin Server-Sent Events stream with `Content-Type:
+text/event-stream`. Each notification is an `event: change` whose `data` is a JSON object with
+one `paths` array. Paths are slash-separated, safe, relative to the one authorized folder
+scope, and filtered through the source's exclusions; absolute paths are never sent. An empty
+array (`{"paths":[]}`) means the client must revalidate the whole scope. Filesystem bursts are
+coalesced over a 100 ms quiet window. A batch contains at most 128 unique paths, each at most
+4096 characters; the server uses the same empty array when the platform does not supply a
+filename or when a payload must be safely bounded. Event IDs and durable replay are not used.
+
+The browser opens EventSource at the relative same-origin URL `/atlas/api/events` and relies on
+the browser's native reconnect behavior. Every `open`, including reconnect, triggers a full
+scope refresh to cover changes while disconnected. Named changes refresh loaded parent folders
+and the selected document when it matches; full refreshes revalidate all loaded folders and the
+selected document. The Node source invalidates its lazy search index when it observes a
+non-excluded change. Unsubscribing or closing a stream closes its watcher; CLI shutdown closes
+all remaining streams and watchers. Sources without `watch()` return a safe not-supported
+response (`501 EVENTS_NOT_SUPPORTED`) for the local events route.
+
+The CLI serves the built browser UI at `/` and its fixed bundle assets under `/assets/` from
+the same listener and origin. Static file resolution is limited to the installed UI bundle;
+the selected folder is never a static root. Unknown paths remain 404 problem responses, and
+the existing API routes take precedence over UI handling.
 
 ## Viewer layout
 
@@ -98,6 +136,16 @@ write requests.
 Deep links use `#/<scope>/<path>#<heading>` and are reloadable. On narrow screens, the tree
 and outline become drawers while the document keeps the available width. Folder profile
 does not show a scope switcher.
+
+### Phase 3 initial browser slice
+
+The initial CLI-hosted explorer implements one-folder source info, lazy one-level tree
+navigation, file selection, and a root landing view that prefers `README.md`, then
+`index.md`, otherwise a list of available entries or an empty state. Text files are shown
+as inert, escaped source; binary files show type and size metadata. Markdown is not parsed
+as HTML in this slice. Loading, missing-file, and source errors are visible and announced;
+the navigation uses native keyboard-operable controls and visible focus. Search, events,
+scope switching, writes, remote fetches, and rich renderers remain later work.
 
 ## Renderer matrix
 
@@ -131,22 +179,22 @@ not replace the fifteen requested visualisations above.
 
 ### Other file types and Markdown features
 
-| Input                                   | Rendering and constraints                                                                                                                                                                                                                                                                                                    |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Markdown                                | GFM tables, task lists, strikethrough, autolinks, footnotes, YAML frontmatter card, heading anchors, and GitHub-style alerts. Resolve relative links and images only within scope. Resolve `[[wiki-links]]` by file name or frontmatter `name`. Raw HTML is disabled by default and sanitized when a renderer requires HTML. |
-| Math                                    | `$...$` and `$$...$$` using a KaTeX candidate, loaded lazily.                                                                                                                                                                                                                                                                |
-| Code fences and source files            | Bounded language set with a Shiki candidate, loaded lazily. Fence language is part of renderer dispatch.                                                                                                                                                                                                                     |
-| `chart` fence                           | Vega-Lite JSON with tooltips and legend toggle. Disable the data loader so specifications cannot fetch URLs; use a CSP-compatible interpreter candidate.                                                                                                                                                                     |
-| `openapi.json` and `*.openapi.yaml`     | API reference grouped by tag, with operations, parameters, request/response schemas, authentication, and status codes. Reuse the existing OpenAPI adapter where applicable.                                                                                                                                                  |
-| `.bpmn`                                 | Read-only navigable BPMN view; retain the bpmn.io watermark required by its license.                                                                                                                                                                                                                                         |
-| `.mmd` and `.mermaid`                   | Mermaid document renderer.                                                                                                                                                                                                                                                                                                   |
-| `.json`                                 | Collapsible tree by default; safely detect OpenAPI, UIDL, Kerangka, graph, and legacy Context Snapshot inputs for their dedicated renderers.                                                                                                                                                                                 |
-| `.jsonl`                                | Records displayed as a table.                                                                                                                                                                                                                                                                                                |
-| `.yaml` and `.yml`                      | Highlighted source; apply the same safe format detection as JSON.                                                                                                                                                                                                                                                            |
-| `.svg`, `.png`, `.jpg`, `.webp`, `.gif` | Image viewer; SVG is displayed through an image element, never inserted as active markup.                                                                                                                                                                                                                                    |
-| `.pdf`                                  | Browser-native PDF viewer.                                                                                                                                                                                                                                                                                                   |
-| `.html`                                 | Source by default; optional preview in an opaque-origin sandboxed iframe.                                                                                                                                                                                                                                                    |
-| Other files                             | Metadata card; binary data is not interpreted as text.                                                                                                                                                                                                                                                                       |
+| Input                                   | Rendering and constraints                                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Markdown                                | GFM tables, task lists, strikethrough, autolinks, footnotes, YAML frontmatter card, heading anchors, and GitHub-style alerts. Resolve relative links (including heading fragments) and raster images only through the current scope. Suppress remote images and SVG; resolve `[[wiki-links]]` by file name or frontmatter `name`. Raw HTML is disabled by default and sanitized when a renderer requires HTML. |
+| Math                                    | `$...$` and `$$...$$` using a KaTeX candidate, loaded lazily.                                                                                                                                                                                                                                                                                                                                                  |
+| Code fences and source files            | Bounded language set with a Shiki candidate, loaded lazily. Fence language is part of renderer dispatch.                                                                                                                                                                                                                                                                                                       |
+| `chart` fence                           | Vega-Lite JSON with tooltips and legend toggle. Disable the data loader so specifications cannot fetch URLs; use a CSP-compatible interpreter candidate.                                                                                                                                                                                                                                                       |
+| `openapi.json` and `*.openapi.yaml`     | API reference grouped by tag, with operations, parameters, request/response schemas, authentication, and status codes. Reuse the existing OpenAPI adapter where applicable.                                                                                                                                                                                                                                    |
+| `.bpmn`                                 | Read-only navigable BPMN view; retain the bpmn.io watermark required by its license.                                                                                                                                                                                                                                                                                                                           |
+| `.mmd` and `.mermaid`                   | Mermaid document renderer.                                                                                                                                                                                                                                                                                                                                                                                     |
+| `.json`                                 | Collapsible tree by default; safely detect OpenAPI, UIDL, Kerangka, graph, and legacy Context Snapshot inputs for their dedicated renderers.                                                                                                                                                                                                                                                                   |
+| `.jsonl`                                | Records displayed as a table.                                                                                                                                                                                                                                                                                                                                                                                  |
+| `.yaml` and `.yml`                      | Highlighted source; apply the same safe format detection as JSON.                                                                                                                                                                                                                                                                                                                                              |
+| `.svg`, `.png`, `.jpg`, `.webp`, `.gif` | Image viewer; SVG is displayed through an image element, never inserted as active markup.                                                                                                                                                                                                                                                                                                                      |
+| `.pdf`                                  | Browser-native PDF viewer.                                                                                                                                                                                                                                                                                                                                                                                     |
+| `.html`                                 | Source by default; optional preview in an opaque-origin sandboxed iframe.                                                                                                                                                                                                                                                                                                                                      |
+| Other files                             | Metadata card; binary data is not interpreted as text.                                                                                                                                                                                                                                                                                                                                                         |
 
 Candidate renderer packages include Markdown/GFM and sanitization tools, Mermaid, KaTeX,
 Shiki, Vega-Lite, a BPMN viewer, and UIDL Runtime. Search implementation candidates include
@@ -169,6 +217,9 @@ pan, full screen, source copy, and SVG download where the renderer safely suppor
 - Keep the system read-only. Do not provide upload, mutation, or source-write routes.
 - Do not fetch remote Markdown links, images, OpenAPI references, chart data, or other
   renderer resources. No request may leave the serving origin.
+- Local Markdown images must be read through the current `ContentSource` scope, remain within
+  the 10 MB file limit, and be validated as raster bytes before use. CSP may allow `blob:` only
+  for images generated from those validated bytes; it must not allow remote image origins.
 - Sanitize rendered Markdown, keep raw HTML disabled unless sanitized, use strict Mermaid
   security, show SVG as an image, and disable external chart data loading.
 - Sandbox HTML and UIDL previews in opaque-origin iframes with a narrow message boundary.

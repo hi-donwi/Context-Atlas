@@ -105,7 +105,10 @@ export interface ContentSource {
   /** Optionally search within one authorized scope and return ranked results. */
   search?(scopeId: string, query: string): Promise<SearchHit[]>;
 
-  /** Optionally report changed relative paths and return an unsubscribe function. */
+  /**
+   * Optionally report changed safe paths relative to the authorized scope and return an
+   * unsubscribe function. An empty path list means the entire scope may have changed.
+   */
   watch?(onChange: (paths: string[]) => void): () => void;
 }
 
@@ -122,3 +125,9 @@ export { resolveLink } from './links.js';
 export type { LinkEntry, ResolvedLink } from './links.js';
 export { createFolderSourceInfo } from './folder-profile.js';
 export type { FolderSourceOptions } from './folder-profile.js';
+export {
+  MAX_SEARCH_QUERY_LENGTH,
+  MAX_SEARCH_RESULTS,
+  MAX_SEARCH_SNIPPET_CHARS,
+  normalizeSearchQuery,
+} from './search.js';

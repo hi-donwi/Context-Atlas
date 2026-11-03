@@ -1,0 +1,16 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { FileText, Folder, FolderOpen } from 'lucide-react';
+export function FolderTree(props) {
+    return (_jsx("ul", { className: "atlas-folder-tree", children: props.entries.map((entry) => (_jsx(TreeEntry, { entry: entry, ...props }, entry.path))) }));
+}
+function TreeEntry({ entry, ...props }) {
+    if (entry.kind === 'dir') {
+        const expanded = props.expandedDirectories.has(entry.path);
+        const children = props.entriesByDirectory[entry.path];
+        const loading = props.loadingDirectories.has(entry.path);
+        const error = props.directoryErrors[entry.path];
+        const Icon = expanded ? FolderOpen : Folder;
+        return (_jsxs("li", { className: "atlas-folder-tree__item", children: [_jsxs("button", { className: "atlas-folder-tree__button", type: "button", "aria-label": `${expanded ? 'Collapse' : 'Expand'} folder ${entry.name}`, "aria-expanded": expanded, onClick: () => props.onToggleDirectory(entry.path), children: [_jsx(Icon, { size: 16, "aria-hidden": "true" }), _jsx("span", { children: entry.name })] }), expanded && (_jsxs("ul", { className: "atlas-folder-tree atlas-folder-tree--nested", children: [loading && (_jsxs("li", { className: "atlas-folder-tree__status", role: "status", children: ["Loading ", entry.name, "\u2026"] })), error !== undefined && (_jsxs("li", { className: "atlas-folder-tree__error", children: [_jsx("span", { role: "alert", children: error }), _jsxs("button", { type: "button", onClick: () => props.onRetryDirectory(entry.path), children: ["Retry loading ", entry.name] })] })), children !== undefined && children.length === 0 && !loading && (_jsx("li", { className: "atlas-folder-tree__status", children: "This folder is empty." })), children?.map((child) => (_jsx(TreeEntry, { entry: child, ...props }, child.path)))] }))] }, entry.path));
+    }
+    return (_jsx("li", { className: "atlas-folder-tree__item", children: _jsxs("button", { className: "atlas-folder-tree__button", type: "button", "aria-label": `Open ${entry.name}`, "aria-current": props.selectedPath === entry.path ? 'page' : undefined, onClick: () => props.onSelectFile(entry.path), children: [_jsx(FileText, { size: 16, "aria-hidden": "true" }), _jsx("span", { children: entry.name })] }) }, entry.path));
+}

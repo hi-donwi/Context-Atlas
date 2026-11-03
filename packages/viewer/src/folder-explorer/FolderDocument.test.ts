@@ -1,0 +1,81 @@
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { describe, expect, it } from 'vitest';
+import type { ContentSource, FileContent } from '@context-atlas/core';
+import { FolderDocument } from './FolderDocument.js';
+
+const source: ContentSource = {
+  async describe() {
+    return { title: 'Test source', profile: 'folder', scopes: [{ id: 'test', label: 'Test' }] };
+  },
+  async list() {
+    return [];
+  },
+  async read() {
+    return { path: 'docs/image.png', type: 'image', content: new Uint8Array(), size: 0 };
+  },
+};
+
+function renderDocument(type: FileContent['type'], content: string): string {
+  return renderToStaticMarkup(
+    createElement(FolderDocument, {
+      path: type === 'mermaid' ? 'docs/architecture.mmd' : 'docs/guide.md',
+      scopeId: 'test',
+      source,
+      onNavigate: () => undefined,
+      file: {
+        path: 'docs/guide.md',
+        type,
+        content,
+        size: new TextEncoder().encode(content).length,
+      },
+    }),
+  );
+}
+
+describe('FolderDocument', () => {
+  it('renders Markdown headings, blockquotes, and GFM tables as formatted content', () => {
+    const markup = renderDocument(
+      'markdown',
+      '# Local guide\n\n> **In plain words:** readable content.\n\n| Route | Method |\n| --- | --- |\n| /health | GET |',
+    );
+
+    expect(markup).toContain('<h1 id="local-guide">Local guide</h1>');
+    expect(markup).toContain('<blockquote>');
+    expect(markup).toContain('<table>');
+  });
+
+  it('assigns unique heading anchors for repeated Markdown headings', () => {
+    const markup = renderDocument('markdown', '# Setup\n\n# Setup');
+
+    expect(markup).toContain('<h1 id="setup">Setup</h1>');
+    expect(markup).toContain('<h1 id="setup-1">Setup</h1>');
+  });
+
+  it('keeps generated heading anchors unique when a heading matches a duplicate suffix', () => {
+    const markup = renderDocument('markdown', '# Topic\n\n# Topic\n\n# Topic 1');
+
+    expect(markup).toContain('<h1 id="topic">Topic</h1>');
+    expect(markup).toContain('<h1 id="topic-1">Topic</h1>');
+    expect(markup).toContain('<h1 id="topic-1-1">Topic 1</h1>');
+  });
+
+  it('renders Mermaid fences and Mermaid files through the diagram renderer', () => {
+    const fenced = renderDocument('markdown', '```mermaid\nflowchart LR\n  A --> B\n```');
+    const standalone = renderDocument('mermaid', 'flowchart LR\n  A --> B');
+
+    expect(fenced).toContain('atlas-mermaid');
+    expect(standalone).toContain('atlas-mermaid');
+  });
+
+  it('does not activate raw HTML or fetch Markdown images', () => {
+    const markup = renderDocument(
+      'markdown',
+      '# Safe\n\n<script>window.pwned = true</script>\n\n![remote](https://example.invalid/image.png)',
+    );
+
+    expect(markup).not.toContain('<script');
+    expect(markup).not.toContain('<img');
+    expect(markup).not.toContain('src="https://example.invalid');
+  });
+});
