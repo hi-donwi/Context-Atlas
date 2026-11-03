@@ -108,3 +108,17 @@ export interface ContentSource {
   /** Optionally report changed relative paths and return an unsubscribe function. */
   watch?(onChange: (paths: string[]) => void): () => void;
 }
+
+export { isExcludedPath, isMetadataOnly, MAX_FILE_SIZE_BYTES } from './exclusions.js';
+export {
+  isPathWithinRoot,
+  normalizeDirectoryPath,
+  normalizeRelativePath,
+  UnsafePathError,
+} from './path-safety.js';
+export { detectFileType, extractFrontmatterMetadata, extractTitle } from './content-metadata.js';
+export type { FrontmatterMetadata } from './content-metadata.js';
+export { resolveLink } from './links.js';
+export type { LinkEntry, ResolvedLink } from './links.js';
+export { createFolderSourceInfo } from './folder-profile.js';
+export type { FolderSourceOptions } from './folder-profile.js';
