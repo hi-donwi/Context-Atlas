@@ -236,18 +236,36 @@ describe('openFolderSource', () => {
     const source = await openFolderSource(root);
     await expect(source.search!('folder', 'freshneedle')).resolves.toEqual([]);
 
-    const nextChange = new Promise<string[]>((resolveChange) => {
-      const unsubscribe = source.watch!((paths) => {
-        unsubscribe();
-        resolveChange(paths);
-      });
-    });
+    const batches: string[][] = [];
+    const unsubscribe = source.watch!((paths) => batches.push(paths));
+    const waitForBatch = async (predicate: (paths: string[]) => boolean): Promise<string[]> => {
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        const batch = batches.find(predicate);
+        if (batch !== undefined) return batch;
+        await new Promise((resolveDelay) => setTimeout(resolveDelay, 50));
+      }
+      throw new Error(`No matching change batch in ${JSON.stringify(batches)}`);
+    };
+
+    // Nested directory watchers are attached asynchronously after watch() returns, and
+    // Linux inotify does not report nested changes to the root watcher. Prove the nested
+    // watcher is live before measuring coalescing.
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      await writeFile(join(root, 'docs', 'probe.txt'), `probe ${attempt}`);
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 150));
+      if (batches.some((paths) => paths.includes('docs/probe.txt'))) break;
+    }
+    await waitForBatch((paths) => paths.includes('docs/probe.txt'));
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 150));
+    batches.length = 0;
+
     await Promise.all([
       writeFile(join(root, 'first.txt'), 'freshneedle in first file'),
       writeFile(join(root, 'docs', 'second.txt'), 'freshneedle in second file'),
     ]);
 
-    const paths = await nextChange;
+    const paths = await waitForBatch((batch) => batch.includes('first.txt'));
+    unsubscribe();
     expect(paths).toContain('first.txt');
     expect(paths).toContain('docs/second.txt');
     expect(paths.every((path) => !path.startsWith('/') && !path.includes('\\'))).toBe(true);
