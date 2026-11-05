@@ -47,7 +47,7 @@ export function FolderDocument({ path, file, scopeId, source, onNavigate }: Fold
           onNavigate={onNavigate}
         />
       ) : typeof file.content === 'string' && file.type === 'mermaid' ? (
-        <MermaidDiagram source={file.content} />
+        <MermaidDiagram source={file.content} documentPath={path} />
       ) : typeof file.content === 'string' ? (
         <pre className="atlas-folder-document__source">
           <code>{file.content}</code>

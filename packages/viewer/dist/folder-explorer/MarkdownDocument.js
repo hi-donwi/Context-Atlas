@@ -111,7 +111,7 @@ function markdownComponents(context) {
             if (isValidElement(code)) {
                 const language = /(?:^|\s)language-([^\s]+)/.exec(code.props.className ?? '')?.[1];
                 if (language?.toLowerCase() === 'mermaid') {
-                    return _jsx(MermaidDiagram, { source: textContent(code.props.children) });
+                    return (_jsx(MermaidDiagram, { source: textContent(code.props.children), documentPath: context.path }));
                 }
             }
             return _jsx("pre", { className: "atlas-markdown__code", children: children });

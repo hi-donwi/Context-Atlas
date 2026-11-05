@@ -163,7 +163,9 @@ function markdownComponents(context: MarkdownContext): Components {
       if (isValidElement<CodeElementProps>(code)) {
         const language = /(?:^|\s)language-([^\s]+)/.exec(code.props.className ?? '')?.[1];
         if (language?.toLowerCase() === 'mermaid') {
-          return <MermaidDiagram source={textContent(code.props.children)} />;
+          return (
+            <MermaidDiagram source={textContent(code.props.children)} documentPath={context.path} />
+          );
         }
       }
 
