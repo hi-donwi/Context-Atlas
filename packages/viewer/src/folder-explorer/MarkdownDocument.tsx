@@ -9,6 +9,7 @@ import {
 import Markdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { splitFrontmatter, type ContentSource, type FrontmatterField } from '@context-atlas/core';
+import { DelimitedTable } from './DelimitedTable.js';
 import { MermaidDiagram } from './MermaidDiagram.js';
 import { formatExplorerLocation } from './path-state.js';
 import { isSafeRasterImageContent, resolveMarkdownTarget } from './markdown-targets.js';
@@ -162,7 +163,17 @@ function markdownComponents(context: MarkdownContext): Components {
 
       if (isValidElement<CodeElementProps>(code)) {
         const language = /(?:^|\s)language-([^\s]+)/.exec(code.props.className ?? '')?.[1];
-        if (language?.toLowerCase() === 'mermaid') {
+        const fence = language?.toLowerCase();
+        if (fence === 'csv' || fence === 'tsv') {
+          return (
+            <DelimitedTable
+              content={textContent(code.props.children)}
+              delimiter={fence === 'csv' ? ',' : '\t'}
+              label={`${fence.toUpperCase()} table`}
+            />
+          );
+        }
+        if (fence === 'mermaid') {
           return (
             <MermaidDiagram source={textContent(code.props.children)} documentPath={context.path} />
           );

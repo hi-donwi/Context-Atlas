@@ -3,6 +3,7 @@ import { Children, createElement, isValidElement, useEffect, useState, } from 'r
 import Markdown, {} from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { splitFrontmatter } from '@context-atlas/core';
+import { DelimitedTable } from './DelimitedTable.js';
 import { MermaidDiagram } from './MermaidDiagram.js';
 import { formatExplorerLocation } from './path-state.js';
 import { isSafeRasterImageContent, resolveMarkdownTarget } from './markdown-targets.js';
@@ -111,7 +112,11 @@ function markdownComponents(context) {
             const code = Children.toArray(children).find((child) => isValidElement(child));
             if (isValidElement(code)) {
                 const language = /(?:^|\s)language-([^\s]+)/.exec(code.props.className ?? '')?.[1];
-                if (language?.toLowerCase() === 'mermaid') {
+                const fence = language?.toLowerCase();
+                if (fence === 'csv' || fence === 'tsv') {
+                    return (_jsx(DelimitedTable, { content: textContent(code.props.children), delimiter: fence === 'csv' ? ',' : '\t', label: `${fence.toUpperCase()} table` }));
+                }
+                if (fence === 'mermaid') {
                     return (_jsx(MermaidDiagram, { source: textContent(code.props.children), documentPath: context.path }));
                 }
             }
