@@ -73,13 +73,24 @@ function isFileType(value: unknown): value is FileType {
   return typeof value === 'string' && FILE_TYPES.has(value);
 }
 
+function isSafeDocumentPath(value: unknown): boolean {
+  if (typeof value !== 'string') return false;
+  try {
+    return normalizeRelativePath(value) === value && !isExcludedPath(value);
+  } catch (error) {
+    if (error instanceof UnsafePathError) return false;
+    throw error;
+  }
+}
+
 function isScopeInfo(value: unknown): value is ScopeInfo {
   return (
     isRecord(value) &&
     typeof value.id === 'string' &&
     typeof value.label === 'string' &&
     (value.description === undefined || typeof value.description === 'string') &&
-    (value.revision === undefined || typeof value.revision === 'string')
+    (value.revision === undefined || typeof value.revision === 'string') &&
+    (value.defaultDocument === undefined || isSafeDocumentPath(value.defaultDocument))
   );
 }
 

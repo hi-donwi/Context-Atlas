@@ -51,6 +51,27 @@ describe('createApiContentSource', () => {
     ]);
   });
 
+  it('accepts a safe scope default document and rejects an unsafe one', async () => {
+    const info = (defaultDocument: unknown) => ({
+      title: 'Guides',
+      profile: 'folder',
+      scopes: [{ id: 'folder', label: 'Guides', defaultDocument }],
+    });
+    const valid = createApiContentSource(
+      vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(info('guide/README.md'))),
+    );
+    await expect(valid.describe()).resolves.toMatchObject({
+      scopes: [{ defaultDocument: 'guide/README.md' }],
+    });
+
+    for (const unsafe of [42, '../outside.md', '/etc/hosts']) {
+      const source = createApiContentSource(
+        vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(info(unsafe))),
+      );
+      await expect(source.describe()).rejects.toBeInstanceOf(LocalApiProtocolError);
+    }
+  });
+
   it('returns text files without changing their content', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
       jsonResponse({

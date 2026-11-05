@@ -35,8 +35,11 @@ The fixed denylist applies in every profile: `.git/`, `.local/`, `node_modules/`
 nor served. Files larger than 10 MB may be listed as metadata only; their contents are not
 read, rendered, or indexed. Optional root `atlas.json` metadata may set a title, include or
 exclude globs, named scopes, or a default document, but cannot relax the fixed denylist or
-the host's authorized scope. The initial local folder source reads only the optional `title`;
-globs, named scopes, and default-document selection remain later work.
+the host's authorized scope. The local folder source reads the optional `title` and
+`defaultDocument`; other keys fail closed. `defaultDocument` is a scope-relative path: an
+unsafe or excluded path rejects the metadata, while a safe path that is missing or not a file
+is ignored so the landing view falls back to `README.md` or `index.md`. Globs and named scopes
+remain later work.
 
 Static build is permitted for one `folder`-profile scope. It is refused for the `workspace`
 profile, including the workspace root, and is not a mechanism for exporting All or multiple
@@ -53,7 +56,7 @@ own scope on every operation.
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ScopeProfile`          | `'folder' \| 'workspace' \| 'host'`.                                                                                                                                                                                                         |
 | `SourceInfo`            | Source title, profile, available `ScopeInfo` values, and optional repository revision metadata.                                                                                                                                              |
-| `ScopeInfo`             | Stable scope identifier, display title, and optional description or revision.                                                                                                                                                                |
+| `ScopeInfo`             | Stable scope identifier, display title, and optional description, revision, or validated default document.                                                                                                                                   |
 | `Entry`                 | One file or directory with relative path, name, kind, file type, and optional title, byte size, and modification time.                                                                                                                       |
 | `FileContent`           | Relative path, file type, text or bytes, byte size, and optional modification time.                                                                                                                                                          |
 | `FileType`              | A recognized document family such as Markdown, Mermaid, JSON, YAML, CSV/TSV, BPMN, image, PDF, HTML, text, binary, or unknown. Structured JSON/YAML may route to OpenAPI, UIDL, Kerangka, or legacy snapshot renderers after safe detection. |

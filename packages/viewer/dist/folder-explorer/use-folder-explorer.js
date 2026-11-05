@@ -146,10 +146,11 @@ export function useFolderExplorer(source) {
             void selectFile(location.path, 'none', location.fragment);
             return;
         }
-        const defaultPath = findDefaultDocument(rootEntries);
+        const scopeDefault = info?.scopes.find((scope) => scope.id === scopeId)?.defaultDocument;
+        const defaultPath = scopeDefault ?? findDefaultDocument(rootEntries);
         if (defaultPath !== undefined)
             void selectFile(defaultPath, 'replace');
-    }, [entriesByDirectory, scopeId, selectFile]);
+    }, [entriesByDirectory, info, scopeId, selectFile]);
     useEffect(() => {
         if (scopeId === null)
             return;

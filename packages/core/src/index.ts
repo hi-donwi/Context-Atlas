@@ -28,6 +28,11 @@ export interface ScopeInfo {
   readonly description?: string;
   /** Optional revision associated with this scope. */
   readonly revision?: string;
+  /**
+   * Optional scope-relative file opened when the reader has not selected one. The source
+   * has already checked that it is a safe, visible file.
+   */
+  readonly defaultDocument?: string;
 }
 
 /** Descriptive metadata for a content source and its available scopes. */

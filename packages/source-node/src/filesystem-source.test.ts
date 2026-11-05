@@ -42,6 +42,37 @@ describe('openFolderSource', () => {
     });
   });
 
+  it('applies an atlas.json default document that is a safe, visible file', async () => {
+    await mkdir(join(root, 'guide'));
+    await writeFile(join(root, 'guide', 'README.md'), '# Guide');
+    await writeFile(
+      join(root, 'atlas.json'),
+      JSON.stringify({ title: 'Guides', defaultDocument: 'guide/README.md' }),
+    );
+
+    const source = await openFolderSource(root);
+
+    await expect(source.describe()).resolves.toMatchObject({
+      scopes: [{ id: 'folder', label: 'Guides', defaultDocument: 'guide/README.md' }],
+    });
+  });
+
+  it('ignores an atlas.json default document that is missing or a directory', async () => {
+    await mkdir(join(root, 'guide'));
+    for (const defaultDocument of ['guide/missing.md', 'guide']) {
+      await writeFile(join(root, 'atlas.json'), JSON.stringify({ defaultDocument }));
+      const info = await (await openFolderSource(root)).describe();
+      expect(info.scopes[0]).not.toHaveProperty('defaultDocument');
+    }
+  });
+
+  it('rejects an atlas.json default document that is unsafe or excluded', async () => {
+    for (const defaultDocument of ['../outside.md', '/etc/hosts', '.git/config', 'a\\b.md', 42]) {
+      await writeFile(join(root, 'atlas.json'), JSON.stringify({ defaultDocument }));
+      await expect(openFolderSource(root)).rejects.toMatchObject({ code: 'INVALID_METADATA' });
+    }
+  });
+
   it('fails closed when atlas.json requests unsupported scope filtering', async () => {
     await writeFile(
       join(root, 'atlas.json'),
