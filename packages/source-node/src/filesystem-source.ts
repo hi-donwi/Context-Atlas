@@ -365,8 +365,10 @@ export class FileSystemContentSource implements ContentSource {
       });
     }
 
-    return entries.sort((left, right) =>
-      left.name.localeCompare(right.name, 'en', { numeric: true, sensitivity: 'base' }),
+    return entries.sort(
+      (left, right) =>
+        (left.kind === right.kind ? 0 : left.kind === 'dir' ? -1 : 1) ||
+        left.name.localeCompare(right.name, 'en', { numeric: true, sensitivity: 'base' }),
     );
   }
 
