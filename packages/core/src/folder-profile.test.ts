@@ -26,4 +26,14 @@ describe('createFolderSourceInfo', () => {
       repositoryRevisions: { folder: 'rev-7' },
     });
   });
+
+  it('records an optional default document on the folder scope', () => {
+    expect(createFolderSourceInfo({ title: 'Guides', defaultDocument: 'guide/README.md' })).toEqual(
+      {
+        title: 'Guides',
+        profile: 'folder',
+        scopes: [{ id: 'folder', label: 'Guides', defaultDocument: 'guide/README.md' }],
+      },
+    );
+  });
 });

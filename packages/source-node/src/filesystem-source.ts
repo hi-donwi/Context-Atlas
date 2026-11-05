@@ -206,7 +206,12 @@ async function readStableFile(absolutePath: string, maxBytes: number): Promise<R
   }
 }
 
-async function readMetadataTitle(rootPath: string): Promise<string | undefined> {
+interface FolderMetadata {
+  readonly title?: string;
+  readonly defaultDocument?: string;
+}
+
+async function readFolderMetadata(rootPath: string): Promise<FolderMetadata> {
   try {
     const resolved = await resolveWithinScope(rootPath, 'atlas.json');
     const { bytes } = await readStableFile(resolved.absolutePath, MAX_METADATA_BYTES);
@@ -221,25 +226,58 @@ async function readMetadataTitle(rootPath: string): Promise<string | undefined> 
       throw new FileSystemSourceError('INVALID_METADATA');
     }
     const record = metadata as Record<string, unknown>;
-    const unsupportedKeys = ['include', 'exclude', 'scopes', 'defaultDocument'];
-    if (
-      Object.keys(record).some((key) => key !== 'title') ||
-      unsupportedKeys.some((key) => Object.prototype.hasOwnProperty.call(record, key))
-    ) {
+    const supportedKeys = new Set(['title', 'defaultDocument']);
+    if (Object.keys(record).some((key) => !supportedKeys.has(key))) {
       throw new FileSystemSourceError('UNSUPPORTED_METADATA');
     }
-    if (record.title === undefined) return undefined;
-    if (
-      typeof record.title !== 'string' ||
-      record.title.length > 200 ||
-      /[\u0000-\u001f\u007f]/.test(record.title)
-    ) {
-      throw new FileSystemSourceError('INVALID_METADATA');
+
+    let title: string | undefined;
+    if (record.title !== undefined) {
+      if (
+        typeof record.title !== 'string' ||
+        record.title.length > 200 ||
+        /[\u0000-\u001f\u007f]/.test(record.title)
+      ) {
+        throw new FileSystemSourceError('INVALID_METADATA');
+      }
+      title = record.title.trim() || undefined;
     }
-    return record.title.trim() || undefined;
+
+    const defaultDocument = await readDefaultDocument(rootPath, record.defaultDocument);
+    return {
+      ...(title === undefined ? {} : { title }),
+      ...(defaultDocument === undefined ? {} : { defaultDocument }),
+    };
   } catch (error) {
-    if (error instanceof FileSystemSourceError && error.code === 'NOT_FOUND') return undefined;
+    if (error instanceof FileSystemSourceError && error.code === 'NOT_FOUND') return {};
     throw error;
+  }
+}
+
+/**
+ * Validate an atlas.json default document. An unsafe or excluded path fails closed; a path
+ * that is safe but missing or not a file is ignored so the reader falls back to README.md.
+ */
+async function readDefaultDocument(rootPath: string, value: unknown): Promise<string | undefined> {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string' || value.length > MAX_RELATIVE_PATH_LENGTH) {
+    throw new FileSystemSourceError('INVALID_METADATA');
+  }
+  let path: string;
+  try {
+    path = normalizeRelativePath(value);
+  } catch (error) {
+    if (error instanceof UnsafePathError) throw new FileSystemSourceError('INVALID_METADATA');
+    throw error;
+  }
+  if (path !== value || isExcludedPath(path)) {
+    throw new FileSystemSourceError('INVALID_METADATA');
+  }
+  try {
+    const resolved = await resolveWithinScope(rootPath, path);
+    return (await stat(resolved.absolutePath)).isFile() ? path : undefined;
+  } catch {
+    return undefined;
   }
 }
 
@@ -282,7 +320,10 @@ export class FileSystemContentSource implements ContentSource {
     private readonly info: SourceInfo,
   ) {}
 
-  /** Resolve and validate a folder root; optional `atlas.json` may supply a display title. */
+  /**
+   * Resolve and validate a folder root; optional `atlas.json` may supply a display title and
+   * a default document.
+   */
   static async open(rootPath: string): Promise<FileSystemContentSource> {
     if (rootPath.trim() === '') throw new FileSystemSourceError('INVALID_ROOT');
 
@@ -296,8 +337,17 @@ export class FileSystemContentSource implements ContentSource {
       throw new FileSystemSourceError('INVALID_ROOT');
     }
 
-    const title = (await readMetadataTitle(resolvedRoot)) ?? (basename(resolvedRoot) || 'Folder');
-    return new FileSystemContentSource(resolvedRoot, createFolderSourceInfo({ title }));
+    const metadata = await readFolderMetadata(resolvedRoot);
+    const title = metadata.title ?? (basename(resolvedRoot) || 'Folder');
+    return new FileSystemContentSource(
+      resolvedRoot,
+      createFolderSourceInfo({
+        title,
+        ...(metadata.defaultDocument === undefined
+          ? {}
+          : { defaultDocument: metadata.defaultDocument }),
+      }),
+    );
   }
 
   async describe(): Promise<SourceInfo> {

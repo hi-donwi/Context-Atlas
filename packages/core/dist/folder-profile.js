@@ -5,7 +5,15 @@ export function createFolderSourceInfo(options) {
     return {
         title,
         profile: 'folder',
-        scopes: [{ id: 'folder', label: title }],
+        scopes: [
+            {
+                id: 'folder',
+                label: title,
+                ...(options.defaultDocument === undefined
+                    ? {}
+                    : { defaultDocument: options.defaultDocument }),
+            },
+        ],
         ...(revision === undefined || revision === ''
             ? {}
             : { repositoryRevisions: { folder: revision } }),

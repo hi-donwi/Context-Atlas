@@ -5,6 +5,8 @@ export interface FolderSourceOptions {
     readonly title: string;
     /** Optional revision for the folder's repository or mount. */
     readonly revision?: string;
+    /** Optional scope-relative file to open first, already validated by the source. */
+    readonly defaultDocument?: string;
 }
 /** Create SourceInfo for one opened folder; this profile intentionally has no scope switcher. */
 export declare function createFolderSourceInfo(options: FolderSourceOptions): SourceInfo;
