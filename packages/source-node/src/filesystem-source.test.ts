@@ -73,6 +73,27 @@ describe('openFolderSource', () => {
     expect(docsEntries[0]).toMatchObject({ title: 'Nested guide' });
   });
 
+  it('lists directories before files, each in natural order', async () => {
+    await mkdir(join(root, 'runs'));
+    await mkdir(join(root, 'Archive'));
+    await writeFile(join(root, 'agents.md'), 'a');
+    await writeFile(join(root, '10-later.md'), 'b');
+    await writeFile(join(root, '2-early.md'), 'c');
+    await writeFile(join(root, 'Zeta.txt'), 'd');
+
+    const source = await openFolderSource(root);
+    const entries = await source.list('folder', '');
+
+    expect(entries.map(({ path }) => path)).toEqual([
+      'Archive',
+      'runs',
+      '2-early.md',
+      '10-later.md',
+      'agents.md',
+      'Zeta.txt',
+    ]);
+  });
+
   it('reads text and binary files with their type, byte size, and ISO timestamp', async () => {
     const text = '# Guide\n';
     const binary = Buffer.from([0, 1, 2, 255]);
