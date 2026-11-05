@@ -2,6 +2,7 @@ import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-run
 import { Children, createElement, isValidElement, useEffect, useState, } from 'react';
 import Markdown, {} from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { splitFrontmatter } from '@context-atlas/core';
 import { MermaidDiagram } from './MermaidDiagram.js';
 import { formatExplorerLocation } from './path-state.js';
 import { isSafeRasterImageContent, resolveMarkdownTarget } from './markdown-targets.js';
@@ -146,6 +147,12 @@ function markdownComponents(context) {
         },
     };
 }
+function FrontmatterCard({ fields }) {
+    if (fields.length === 0)
+        return null;
+    return (_jsx("section", { className: "atlas-frontmatter", "aria-label": "Document metadata", children: _jsx("dl", { children: fields.map((field, index) => (_jsxs("div", { children: [_jsx("dt", { children: field.key }), _jsx("dd", { children: field.kind === 'structured' ? (_jsx("pre", { className: "atlas-frontmatter__structured", children: field.value })) : (field.value) })] }, `${field.key}-${index}`))) }) }));
+}
 export function MarkdownDocument({ content, path, scopeId, source, onNavigate, }) {
-    return (_jsx("div", { className: "atlas-markdown", children: _jsx(Markdown, { remarkPlugins: [remarkGfm], components: markdownComponents({ path, scopeId, source, onNavigate }), skipHtml: true, children: content }) }));
+    const frontmatter = splitFrontmatter(content);
+    return (_jsxs("div", { className: "atlas-markdown", children: [frontmatter !== undefined && _jsx(FrontmatterCard, { fields: frontmatter.fields }), _jsx(Markdown, { remarkPlugins: [remarkGfm], components: markdownComponents({ path, scopeId, source, onNavigate }), skipHtml: true, children: frontmatter?.body ?? content })] }));
 }

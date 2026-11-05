@@ -8,7 +8,7 @@ import {
 } from 'react';
 import Markdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import type { ContentSource } from '@context-atlas/core';
+import { splitFrontmatter, type ContentSource, type FrontmatterField } from '@context-atlas/core';
 import { MermaidDiagram } from './MermaidDiagram.js';
 import { formatExplorerLocation } from './path-state.js';
 import { isSafeRasterImageContent, resolveMarkdownTarget } from './markdown-targets.js';
@@ -240,6 +240,28 @@ interface MarkdownDocumentProps {
   readonly onNavigate: (path: string, fragment?: string) => void;
 }
 
+function FrontmatterCard({ fields }: { readonly fields: readonly FrontmatterField[] }) {
+  if (fields.length === 0) return null;
+  return (
+    <section className="atlas-frontmatter" aria-label="Document metadata">
+      <dl>
+        {fields.map((field, index) => (
+          <div key={`${field.key}-${index}`}>
+            <dt>{field.key}</dt>
+            <dd>
+              {field.kind === 'structured' ? (
+                <pre className="atlas-frontmatter__structured">{field.value}</pre>
+              ) : (
+                field.value
+              )}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
 export function MarkdownDocument({
   content,
   path,
@@ -247,14 +269,16 @@ export function MarkdownDocument({
   source,
   onNavigate,
 }: MarkdownDocumentProps) {
+  const frontmatter = splitFrontmatter(content);
   return (
     <div className="atlas-markdown">
+      {frontmatter !== undefined && <FrontmatterCard fields={frontmatter.fields} />}
       <Markdown
         remarkPlugins={[remarkGfm]}
         components={markdownComponents({ path, scopeId, source, onNavigate })}
         skipHtml
       >
-        {content}
+        {frontmatter?.body ?? content}
       </Markdown>
     </div>
   );
