@@ -70,17 +70,29 @@ function TreeEntry({ entry, ...props }: FolderTreeProps & { readonly entry: Entr
     );
   }
 
+  const title = entry.title?.trim();
+  const distinctTitle = title !== undefined && title !== '' && title !== entry.name ? title : null;
+
   return (
     <li className="atlas-folder-tree__item" key={entry.path}>
       <button
         className="atlas-folder-tree__button"
         type="button"
-        aria-label={`Open ${entry.name}`}
+        aria-label={
+          distinctTitle === null ? `Open ${entry.name}` : `Open ${distinctTitle} (${entry.name})`
+        }
         aria-current={props.selectedPath === entry.path ? 'page' : undefined}
         onClick={() => props.onSelectFile(entry.path)}
       >
         <FileText size={16} aria-hidden="true" />
-        <span>{entry.name}</span>
+        {distinctTitle === null ? (
+          <span>{entry.name}</span>
+        ) : (
+          <span className="atlas-folder-tree__label">
+            <span className="atlas-folder-tree__title">{distinctTitle}</span>
+            <span className="atlas-folder-tree__name">{entry.name}</span>
+          </span>
+        )}
       </button>
     </li>
   );
