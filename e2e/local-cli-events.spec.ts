@@ -72,9 +72,10 @@ test('refreshes changed files, folders, and the local search index', async ({ pa
 
   await page.keyboard.press('Control+k');
   const searchInput = page.getByRole('searchbox', { name: 'Search files in this folder' });
+  const searchResults = page.getByRole('list', { name: 'Search results' });
   await searchInput.fill('orchids');
   await page.getByRole('button', { name: 'Search', exact: true }).click();
-  await expect(page.getByRole('button', { name: /Open selected.txt/ })).toBeVisible();
+  await expect(searchResults.getByRole('button', { name: /Open selected.txt/ })).toBeVisible();
 
   await writeFile(
     join(fixtureRoot, 'docs', 'selected.txt'),
@@ -87,6 +88,6 @@ test('refreshes changed files, folders, and the local search index', async ({ pa
 
   await searchInput.fill('freshcontexttoken');
   await page.getByRole('button', { name: 'Search', exact: true }).click();
-  await expect(page.getByRole('button', { name: /Open selected.txt/ })).toBeVisible();
+  await expect(searchResults.getByRole('button', { name: /Open selected.txt/ })).toBeVisible();
   expect(externalRequests).toEqual([]);
 });
