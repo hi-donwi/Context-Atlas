@@ -92,4 +92,19 @@ describe('FolderDocument', () => {
     expect(markup).not.toContain('<hr');
     expect(markup).toContain('<h1 id="visual-guide">Visual guide</h1>');
   });
+
+  it('renders CSV and TSV files and csv fences as sortable, filterable tables', () => {
+    const csv = renderDocument('csv', 'method,path\nGET,/health\nPOST,/orders');
+    const tsv = renderDocument('tsv', 'key\tclient\nalpha\tone');
+    const fenced = renderDocument('markdown', '```csv\nname,count\nalpha,2\n```');
+
+    expect(csv).toContain('aria-label="Filter rows"');
+    expect(csv).toContain('aria-sort="none"');
+    expect(csv).toContain('Sort by method');
+    expect(csv).toContain('<td>/orders</td>');
+    expect(csv).toContain('2 of 2 rows');
+    expect(tsv).toContain('<td>alpha</td>');
+    expect(fenced).toContain('Sort by count');
+    expect(fenced).not.toContain('atlas-markdown__code');
+  });
 });

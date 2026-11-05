@@ -1,4 +1,5 @@
 import type { ContentSource, FileContent } from '@context-atlas/core';
+import { DelimitedTable } from './DelimitedTable.js';
 import { MarkdownDocument } from './MarkdownDocument.js';
 import { MermaidDiagram } from './MermaidDiagram.js';
 
@@ -45,6 +46,12 @@ export function FolderDocument({ path, file, scopeId, source, onNavigate }: Fold
           scopeId={scopeId}
           source={source}
           onNavigate={onNavigate}
+        />
+      ) : typeof file.content === 'string' && (file.type === 'csv' || file.type === 'tsv') ? (
+        <DelimitedTable
+          content={file.content}
+          delimiter={file.type === 'csv' ? ',' : '\t'}
+          label={name}
         />
       ) : typeof file.content === 'string' && file.type === 'mermaid' ? (
         <MermaidDiagram source={file.content} documentPath={path} />
