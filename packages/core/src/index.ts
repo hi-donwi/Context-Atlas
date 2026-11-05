@@ -121,6 +121,12 @@ export {
 } from './path-safety.js';
 export { detectFileType, extractFrontmatterMetadata, extractTitle } from './content-metadata.js';
 export type { FrontmatterMetadata } from './content-metadata.js';
+export {
+  MAX_FRONTMATTER_FIELDS,
+  MAX_FRONTMATTER_VALUE_CHARS,
+  splitFrontmatter,
+} from './frontmatter.js';
+export type { FrontmatterField, SplitFrontmatter } from './frontmatter.js';
 export { resolveLink } from './links.js';
 export type { LinkEntry, ResolvedLink } from './links.js';
 export { createFolderSourceInfo } from './folder-profile.js';

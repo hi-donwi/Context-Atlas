@@ -78,4 +78,18 @@ describe('FolderDocument', () => {
     expect(markup).not.toContain('<img');
     expect(markup).not.toContain('src="https://example.invalid');
   });
+
+  it('renders YAML frontmatter as a metadata card instead of a rule and paragraph', () => {
+    const markup = renderDocument(
+      'markdown',
+      '---\nname: visual-context\ndescription: >-\n  Write a guide.\nmetadata:\n  pack: core\n---\n# Visual guide\n\nBody text.',
+    );
+
+    expect(markup).toContain('aria-label="Document metadata"');
+    expect(markup).toContain('<dt>name</dt><dd>visual-context</dd>');
+    expect(markup).toContain('<dt>description</dt><dd>Write a guide.</dd>');
+    expect(markup).toContain('<pre class="atlas-frontmatter__structured">pack: core</pre>');
+    expect(markup).not.toContain('<hr');
+    expect(markup).toContain('<h1 id="visual-guide">Visual guide</h1>');
+  });
 });
