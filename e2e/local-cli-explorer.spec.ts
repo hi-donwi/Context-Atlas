@@ -126,6 +126,10 @@ test('browse a local folder with keyboard controls, safe previews, and mobile re
   });
 
   await page.goto(cliUrl);
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/assets/favicon.svg');
+  const favicon = await page.request.get(new URL('/assets/favicon.svg', cliUrl).href);
+  expect(favicon.status()).toBe(200);
+  expect(favicon.headers()['content-type']).toContain('image/svg+xml');
   await expect(page.getByRole('heading', { name: 'Browser guide' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Reading this folder' })).toBeVisible();
   await expect(page.getByText('In plain words:', { exact: false })).toBeVisible();
