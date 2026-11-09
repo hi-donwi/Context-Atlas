@@ -13,6 +13,7 @@ import { DelimitedTable } from './DelimitedTable.js';
 import { MermaidDiagram } from './MermaidDiagram.js';
 import { formatExplorerLocation } from './path-state.js';
 import { isSafeRasterImageContent, resolveMarkdownTarget } from './markdown-targets.js';
+import { formatFolderMessage, useFolderLocale, useFolderMessages } from './locale.js';
 
 interface CodeElementProps {
   readonly className?: string;
@@ -53,6 +54,8 @@ interface MarkdownImageProps {
 }
 
 function MarkdownImage({ source, scopeId, documentPath, src, alt, title }: MarkdownImageProps) {
+  const text = useFolderMessages();
+  const locale = useFolderLocale();
   const path = src === undefined ? undefined : resolveMarkdownTarget(documentPath, src)?.path;
   const [image, setImage] = useState<{ readonly path: string; readonly url: string } | null>(null);
   const [failedPath, setFailedPath] = useState<string | null>(null);
@@ -107,9 +110,10 @@ function MarkdownImage({ source, scopeId, documentPath, src, alt, title }: Markd
   }
 
   const label = alt ? `: ${alt}` : '';
-  const status = path !== undefined && failedPath !== path ? 'Loading image' : 'Image not loaded';
+  const status =
+    path !== undefined && failedPath !== path ? text.loadingImage : text.imageUnavailable;
   return (
-    <span className="atlas-markdown__image-placeholder">
+    <span className="atlas-markdown__image-placeholder" lang={locale}>
       {status}
       {label}
     </span>
@@ -121,6 +125,7 @@ interface MarkdownContext {
   readonly scopeId: string;
   readonly source: ContentSource;
   readonly onNavigate: (path: string, fragment?: string) => void;
+  readonly tableLabel: string;
 }
 
 function markdownComponents(context: MarkdownContext): Components {
@@ -169,7 +174,7 @@ function markdownComponents(context: MarkdownContext): Components {
             <DelimitedTable
               content={textContent(code.props.children)}
               delimiter={fence === 'csv' ? ',' : '\t'}
-              label={`${fence.toUpperCase()} table`}
+              label={formatFolderMessage(context.tableLabel, { type: fence.toUpperCase() })}
             />
           );
         }
@@ -252,9 +257,10 @@ interface MarkdownDocumentProps {
 }
 
 function FrontmatterCard({ fields }: { readonly fields: readonly FrontmatterField[] }) {
+  const text = useFolderMessages();
   if (fields.length === 0) return null;
   return (
-    <section className="atlas-frontmatter" aria-label="Document metadata">
+    <section className="atlas-frontmatter" aria-label={text.metadata}>
       <dl>
         {fields.map((field, index) => (
           <div key={`${field.key}-${index}`}>
@@ -280,13 +286,20 @@ export function MarkdownDocument({
   source,
   onNavigate,
 }: MarkdownDocumentProps) {
+  const text = useFolderMessages();
   const frontmatter = splitFrontmatter(content);
   return (
     <div className="atlas-markdown">
       {frontmatter !== undefined && <FrontmatterCard fields={frontmatter.fields} />}
       <Markdown
         remarkPlugins={[remarkGfm]}
-        components={markdownComponents({ path, scopeId, source, onNavigate })}
+        components={markdownComponents({
+          path,
+          scopeId,
+          source,
+          onNavigate,
+          tableLabel: text.tableLabel,
+        })}
         skipHtml
       >
         {frontmatter?.body ?? content}

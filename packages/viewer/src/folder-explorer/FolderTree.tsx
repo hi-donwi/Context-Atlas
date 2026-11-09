@@ -1,5 +1,6 @@
 import { FileText, Folder, FolderOpen } from 'lucide-react';
 import type { Entry } from '@context-atlas/core';
+import { formatFolderMessage, useFolderMessages } from './locale.js';
 
 interface FolderTreeProps {
   readonly entries: readonly Entry[];
@@ -24,6 +25,7 @@ export function FolderTree(props: FolderTreeProps) {
 }
 
 function TreeEntry({ entry, ...props }: FolderTreeProps & { readonly entry: Entry }) {
+  const text = useFolderMessages();
   if (entry.kind === 'dir') {
     const expanded = props.expandedDirectories.has(entry.path);
     const children = props.entriesByDirectory[entry.path];
@@ -36,7 +38,9 @@ function TreeEntry({ entry, ...props }: FolderTreeProps & { readonly entry: Entr
         <button
           className="atlas-folder-tree__button"
           type="button"
-          aria-label={`${expanded ? 'Collapse' : 'Expand'} folder ${entry.name}`}
+          aria-label={formatFolderMessage(expanded ? text.collapseFolder : text.expandFolder, {
+            name: entry.name,
+          })}
           aria-expanded={expanded}
           onClick={() => props.onToggleDirectory(entry.path)}
         >
@@ -47,19 +51,19 @@ function TreeEntry({ entry, ...props }: FolderTreeProps & { readonly entry: Entr
           <ul className="atlas-folder-tree atlas-folder-tree--nested">
             {loading && (
               <li className="atlas-folder-tree__status" role="status">
-                Loading {entry.name}…
+                {formatFolderMessage(text.loadingDirectory, { name: entry.name })}
               </li>
             )}
             {error !== undefined && (
               <li className="atlas-folder-tree__error">
-                <span role="alert">{error}</span>
+                <span role="alert">{text.directoryError}</span>
                 <button type="button" onClick={() => props.onRetryDirectory(entry.path)}>
-                  Retry loading {entry.name}
+                  {formatFolderMessage(text.retryDirectory, { name: entry.name })}
                 </button>
               </li>
             )}
             {children !== undefined && children.length === 0 && !loading && (
-              <li className="atlas-folder-tree__status">This folder is empty.</li>
+              <li className="atlas-folder-tree__status">{text.directoryEmpty}</li>
             )}
             {children?.map((child) => (
               <TreeEntry key={child.path} entry={child} {...props} />
@@ -78,9 +82,9 @@ function TreeEntry({ entry, ...props }: FolderTreeProps & { readonly entry: Entr
       <button
         className="atlas-folder-tree__button"
         type="button"
-        aria-label={
-          distinctTitle === null ? `Open ${entry.name}` : `Open ${distinctTitle} (${entry.name})`
-        }
+        aria-label={formatFolderMessage(text.openFile, {
+          name: distinctTitle === null ? entry.name : `${distinctTitle} (${entry.name})`,
+        })}
         aria-current={props.selectedPath === entry.path ? 'page' : undefined}
         onClick={() => props.onSelectFile(entry.path)}
       >

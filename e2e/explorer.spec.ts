@@ -121,10 +121,12 @@ test('selected context exports portable JSON and the task objective', async ({ p
 
 test('invalid import preserves the current project and valid OpenAPI import stays local', async ({
   page,
+  baseURL,
 }) => {
   const externalRequests: string[] = [];
+  const localOrigin = new URL(baseURL!).origin;
   page.on('request', (request) => {
-    if (!request.url().startsWith('http://127.0.0.1:4173') && !request.url().startsWith('data:'))
+    if (!request.url().startsWith('data:') && new URL(request.url()).origin !== localOrigin)
       externalRequests.push(request.url());
   });
   await page.goto('/');

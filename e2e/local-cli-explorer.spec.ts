@@ -111,6 +111,109 @@ test.afterAll(async () => {
   if (fixtureRoot !== undefined) await rm(fixtureRoot, { recursive: true, force: true });
 });
 
+test('switch interface language without changing the selected document or sending data out', async ({
+  page,
+}) => {
+  const externalRequests: string[] = [];
+  page.on('request', (request) => {
+    if (!request.url().startsWith(cliUrl) && !request.url().startsWith('blob:')) {
+      externalRequests.push(request.url());
+    }
+  });
+
+  await page.goto(cliUrl);
+  await expect(page.getByRole('heading', { name: 'Reading this folder' })).toBeVisible();
+  const originalPath = await page.locator('.atlas-folder-document__path').textContent();
+  await page.getByRole('combobox', { name: 'Interface language' }).selectOption('id');
+  await expect(page.getByRole('navigation', { name: 'Isi folder' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Berkas' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Lewati ke dokumen' })).toHaveAttribute('lang', 'id');
+  await expect(page.locator('.atlas-folder-document__facts')).toHaveAttribute('lang', 'id');
+  await expect(page.getByRole('toolbar', { name: 'Kontrol diagram' })).toHaveAttribute(
+    'lang',
+    'id',
+  );
+  await expect(page.getByRole('button', { name: /Cari dalam folder ini/ })).toBeVisible();
+  await expect(page.locator('.atlas-folder-document__path')).toHaveText(originalPath!);
+  await expect(page.getByRole('heading', { name: 'Reading this folder' })).toBeVisible();
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.getByRole('button', { name: /Cari dalam folder ini/ }).click();
+  await expect(page.getByRole('searchbox', { name: 'Cari berkas dalam folder ini' })).toBeFocused();
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+    .toBe(true);
+  await page.keyboard.press('Escape');
+  await page.getByRole('combobox', { name: 'Bahasa antarmuka' }).selectOption('en');
+  await expect(page.getByRole('navigation', { name: 'Folder contents' })).toBeVisible();
+  await expect(page.locator('.atlas-folder-document__path')).toHaveText(originalPath!);
+  await page.setViewportSize({ width: 320, height: 800 });
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+    .toBe(true);
+  expect(externalRequests).toEqual([]);
+});
+
+test('aligns header controls and keeps both languages usable across viewport sizes', async ({
+  page,
+}) => {
+  await page.goto(cliUrl);
+  await expect(page.getByRole('heading', { name: 'Browser guide' })).toBeVisible();
+
+  for (const locale of ['en', 'id'] as const) {
+    const currentLabel = locale === 'en' ? 'Interface language' : 'Bahasa antarmuka';
+    if (locale === 'id') {
+      await page.getByRole('combobox', { name: 'Interface language' }).selectOption('id');
+    }
+    for (const width of [1440, 1024, 768, 390, 320]) {
+      await page.setViewportSize({ width, height: 800 });
+      const search = page.getByRole('button', {
+        name: locale === 'en' ? /Search this folder/ : /Cari dalam folder ini/,
+      });
+      const language = page.getByRole('combobox', { name: currentLabel });
+      const badge = page.getByText(locale === 'en' ? 'Read only' : 'Hanya baca', { exact: true });
+      await expect(search).toBeVisible();
+      await expect(language).toBeVisible();
+      await expect(badge).toBeVisible();
+      const searchRect = (await search.boundingBox())!;
+      const languageRect = (await language.boundingBox())!;
+      expect(searchRect.height).toBeGreaterThanOrEqual(44);
+      expect(languageRect.height).toBeGreaterThanOrEqual(44);
+      expect(
+        Math.abs(searchRect.y + searchRect.height / 2 - languageRect.y - languageRect.height / 2),
+      ).toBeLessThanOrEqual(2);
+      expect(languageRect.x).toBeGreaterThanOrEqual(searchRect.x + searchRect.width + 8);
+      expect(languageRect.x + languageRect.width).toBeLessThanOrEqual(width);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+      await search.click();
+      const panel = page.getByRole('region', {
+        name: locale === 'en' ? 'Search this folder' : 'Cari dalam folder ini',
+      });
+      await expect(panel).toBeVisible();
+      const panelRect = (await panel.boundingBox())!;
+      expect(panelRect.x).toBeGreaterThanOrEqual(0);
+      expect(panelRect.x + panelRect.width).toBeLessThanOrEqual(width);
+      await page.keyboard.press('Escape');
+    }
+  }
+
+  await page.getByRole('heading', { name: 'Browser guide' }).evaluate((heading) => {
+    heading.textContent = 'A very long synthetic project title '.repeat(8);
+  });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole('button', { name: /Cari dalam folder ini/ }).click();
+  await expect(page.getByRole('searchbox', { name: 'Cari berkas dalam folder ini' })).toBeFocused();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.keyboard.press('Escape');
+  const navigationToggle = page.getByRole('button', { name: 'Sembunyikan isi folder' });
+  await navigationToggle.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('navigation', { name: 'Isi folder' })).toBeHidden();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('navigation', { name: 'Isi folder' })).toBeVisible();
+});
+
 test('browse a local folder with keyboard controls, safe previews, and mobile reflow', async ({
   page,
 }) => {

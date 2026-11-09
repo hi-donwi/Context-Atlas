@@ -2,6 +2,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Copy, Download, Maximize2, Minimize2, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
 import { downloadText } from '../download.js';
+import { useFolderLocale, useFolderMessages } from './locale.js';
 import { diagramCanvasSize, diagramDownloadName, formatDiagramZoom, naturalDiagramWidth, zoomInLevel, zoomOutLevel, } from './diagram-view.js';
 const MAX_MERMAID_SOURCE_CHARS = 50_000;
 const SECURE_DIRECTIVE_KEYS = [
@@ -21,12 +22,14 @@ function sanitizeSvg(svg, sanitize) {
 }
 /** A rendered, already-sanitized diagram with zoom, pan, full-screen, copy, and download. */
 export function DiagramFrame({ svg, source, downloadName }) {
+    const text = useFolderMessages();
+    const locale = useFolderLocale();
     const figureRef = useRef(null);
     const viewportRef = useRef(null);
     const panStart = useRef(null);
     const [zoom, setZoom] = useState(1);
     const [fullScreen, setFullScreen] = useState(false);
-    const [status, setStatus] = useState('');
+    const [status, setStatus] = useState(null);
     const naturalWidth = useMemo(() => naturalDiagramWidth(svg), [svg]);
     useEffect(() => {
         const onFullScreenChange = () => setFullScreen(document.fullscreenElement !== null && document.fullscreenElement === figureRef.current);
@@ -41,19 +44,19 @@ export function DiagramFrame({ svg, source, downloadName }) {
             void document.exitFullscreen().catch(() => undefined);
         }
         else if (typeof figure.requestFullscreen === 'function') {
-            void figure.requestFullscreen().catch(() => setStatus('Full screen is not available.'));
+            void figure.requestFullscreen().catch(() => setStatus('fullScreenUnavailable'));
         }
         else {
-            setStatus('Full screen is not available.');
+            setStatus('fullScreenUnavailable');
         }
     };
     const copySource = () => {
         const clipboard = typeof navigator === 'undefined' ? undefined : navigator.clipboard;
         if (clipboard === undefined) {
-            setStatus('Copy is not available in this browser.');
+            setStatus('copyUnavailable');
             return;
         }
-        void clipboard.writeText(source).then(() => setStatus('Diagram source copied.'), () => setStatus('Diagram source could not be copied.'));
+        void clipboard.writeText(source).then(() => setStatus('diagramCopied'), () => setStatus('diagramCopyFailed'));
     };
     const startPan = (event) => {
         const viewport = viewportRef.current;
@@ -86,16 +89,18 @@ export function DiagramFrame({ svg, source, downloadName }) {
         panStart.current = null;
         viewportRef.current?.releasePointerCapture(event.pointerId);
     };
-    return (_jsxs("figure", { ref: figureRef, className: `atlas-mermaid${fullScreen ? ' atlas-mermaid--fullscreen' : ''}`, children: [_jsxs("div", { className: "atlas-mermaid__toolbar", role: "toolbar", "aria-label": "Diagram controls", children: [_jsx("button", { type: "button", "aria-label": "Zoom out", title: "Zoom out", onClick: () => setZoom(zoomOutLevel), children: _jsx(ZoomOut, { size: 16, "aria-hidden": "true" }) }), _jsxs("button", { type: "button", className: "atlas-mermaid__zoom-value", "aria-label": "Reset zoom", title: "Reset zoom", onClick: () => setZoom(1), children: [zoom === 1 ? null : _jsx(RotateCcw, { size: 14, "aria-hidden": "true" }), _jsx("span", { children: formatDiagramZoom(zoom) })] }), _jsx("button", { type: "button", "aria-label": "Zoom in", title: "Zoom in", onClick: () => setZoom(zoomInLevel), children: _jsx(ZoomIn, { size: 16, "aria-hidden": "true" }) }), _jsx("span", { className: "atlas-mermaid__toolbar-gap", "aria-hidden": "true" }), _jsx("button", { type: "button", "aria-label": fullScreen ? 'Exit full screen' : 'Full screen', title: fullScreen ? 'Exit full screen' : 'Full screen', onClick: toggleFullScreen, children: fullScreen ? (_jsx(Minimize2, { size: 16, "aria-hidden": "true" })) : (_jsx(Maximize2, { size: 16, "aria-hidden": "true" })) }), _jsx("button", { type: "button", "aria-label": "Copy diagram source", title: "Copy diagram source", onClick: copySource, children: _jsx(Copy, { size: 16, "aria-hidden": "true" }) }), _jsx("button", { type: "button", "aria-label": "Download SVG", title: "Download SVG", onClick: () => downloadText(downloadName, svg, 'image/svg+xml'), children: _jsx(Download, { size: 16, "aria-hidden": "true" }) })] }), _jsx("div", { ref: viewportRef, className: "atlas-mermaid__viewport", tabIndex: 0, "aria-label": "Diagram viewport; scroll or drag to pan", onPointerDown: startPan, onPointerMove: movePan, onPointerUp: endPan, onPointerCancel: endPan, children: _jsx("div", { className: "atlas-mermaid__canvas", style: { inlineSize: diagramCanvasSize(zoom, naturalWidth) }, children: _jsx("div", { className: "atlas-mermaid__svg", role: "img", "aria-label": "Mermaid diagram", dangerouslySetInnerHTML: { __html: svg } }) }) }), _jsx("p", { className: "atlas-mermaid__status", role: "status", "aria-live": "polite", children: status })] }));
+    return (_jsxs("figure", { ref: figureRef, className: `atlas-mermaid${fullScreen ? ' atlas-mermaid--fullscreen' : ''}`, children: [_jsxs("div", { className: "atlas-mermaid__toolbar", role: "toolbar", "aria-label": text.diagramControls, lang: locale, children: [_jsx("button", { type: "button", "aria-label": text.zoomOut, title: text.zoomOut, onClick: () => setZoom(zoomOutLevel), children: _jsx(ZoomOut, { size: 16, "aria-hidden": "true" }) }), _jsxs("button", { type: "button", className: "atlas-mermaid__zoom-value", "aria-label": text.resetZoom, title: text.resetZoom, onClick: () => setZoom(1), children: [zoom === 1 ? null : _jsx(RotateCcw, { size: 14, "aria-hidden": "true" }), _jsx("span", { children: formatDiagramZoom(zoom) })] }), _jsx("button", { type: "button", "aria-label": text.zoomIn, title: text.zoomIn, onClick: () => setZoom(zoomInLevel), children: _jsx(ZoomIn, { size: 16, "aria-hidden": "true" }) }), _jsx("span", { className: "atlas-mermaid__toolbar-gap", "aria-hidden": "true" }), _jsx("button", { type: "button", "aria-label": fullScreen ? text.exitFullScreen : text.fullScreen, title: fullScreen ? text.exitFullScreen : text.fullScreen, onClick: toggleFullScreen, children: fullScreen ? (_jsx(Minimize2, { size: 16, "aria-hidden": "true" })) : (_jsx(Maximize2, { size: 16, "aria-hidden": "true" })) }), _jsx("button", { type: "button", "aria-label": text.copyDiagram, title: text.copyDiagram, onClick: copySource, children: _jsx(Copy, { size: 16, "aria-hidden": "true" }) }), _jsx("button", { type: "button", "aria-label": text.downloadSvg, title: text.downloadSvg, onClick: () => downloadText(downloadName, svg, 'image/svg+xml'), children: _jsx(Download, { size: 16, "aria-hidden": "true" }) })] }), _jsx("div", { ref: viewportRef, className: "atlas-mermaid__viewport", tabIndex: 0, lang: locale, "aria-label": text.diagramViewport, onPointerDown: startPan, onPointerMove: movePan, onPointerUp: endPan, onPointerCancel: endPan, children: _jsx("div", { className: "atlas-mermaid__canvas", style: { inlineSize: diagramCanvasSize(zoom, naturalWidth) }, children: _jsx("div", { className: "atlas-mermaid__svg", role: "img", "aria-label": text.mermaidDiagram, dangerouslySetInnerHTML: { __html: svg } }) }) }), _jsx("p", { className: "atlas-mermaid__status", role: "status", "aria-live": "polite", lang: locale, children: status === null ? '' : text[status] })] }));
 }
 export function MermaidDiagram({ source, documentPath }) {
+    const text = useFolderMessages();
+    const locale = useFolderLocale();
     const reactId = useId();
     const renderId = `atlas-mermaid-${reactId.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
     const [state, setState] = useState({ status: 'loading' });
     useEffect(() => {
         let mounted = true;
         if (source.length > MAX_MERMAID_SOURCE_CHARS) {
-            setState({ status: 'error', message: 'This diagram is too large to render.' });
+            setState({ status: 'error', message: 'diagramTooLarge' });
             return () => {
                 mounted = false;
             };
@@ -133,7 +138,7 @@ export function MermaidDiagram({ source, documentPath }) {
             }
             catch {
                 if (mounted) {
-                    setState({ status: 'error', message: 'This Mermaid diagram could not be rendered.' });
+                    setState({ status: 'error', message: 'diagramFailed' });
                 }
             }
         })();
@@ -145,7 +150,7 @@ export function MermaidDiagram({ source, documentPath }) {
         return (_jsx(DiagramFrame, { svg: state.svg, source: source, downloadName: diagramDownloadName(documentPath) }));
     }
     if (state.status === 'error') {
-        return (_jsxs("figure", { className: "atlas-mermaid", children: [_jsx("p", { className: "atlas-mermaid__error", role: "alert", children: state.message }), _jsxs("details", { children: [_jsx("summary", { children: "View diagram source" }), _jsx("pre", { className: "atlas-markdown__code", children: _jsx("code", { children: source }) })] })] }));
+        return (_jsxs("figure", { className: "atlas-mermaid", children: [_jsx("p", { className: "atlas-mermaid__error", role: "alert", lang: locale, children: text[state.message] }), _jsxs("details", { children: [_jsx("summary", { lang: locale, children: text.viewDiagramSource }), _jsx("pre", { className: "atlas-markdown__code", children: _jsx("code", { children: source }) })] })] }));
     }
-    return (_jsx("span", { className: "atlas-mermaid__loading", role: "status", children: "Rendering Mermaid diagram\u2026" }));
+    return (_jsx("span", { className: "atlas-mermaid__loading", role: "status", lang: locale, children: text.renderingDiagram }));
 }

@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type PointerEvent } from 'react';
 import { Copy, Download, Maximize2, Minimize2, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
 import { downloadText } from '../download.js';
+import { useFolderLocale, useFolderMessages } from './locale.js';
 import {
   diagramCanvasSize,
   diagramDownloadName,
@@ -24,7 +25,7 @@ const SECURE_DIRECTIVE_KEYS = [
 type DiagramState =
   | { readonly status: 'loading' }
   | { readonly status: 'ready'; readonly svg: string }
-  | { readonly status: 'error'; readonly message: string };
+  | { readonly status: 'error'; readonly message: 'diagramTooLarge' | 'diagramFailed' };
 
 let mermaidConfigured = false;
 
@@ -50,12 +51,16 @@ interface PanStart {
 
 /** A rendered, already-sanitized diagram with zoom, pan, full-screen, copy, and download. */
 export function DiagramFrame({ svg, source, downloadName }: DiagramFrameProps) {
+  const text = useFolderMessages();
+  const locale = useFolderLocale();
   const figureRef = useRef<HTMLElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const panStart = useRef<PanStart | null>(null);
   const [zoom, setZoom] = useState(1);
   const [fullScreen, setFullScreen] = useState(false);
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState<
+    'fullScreenUnavailable' | 'copyUnavailable' | 'diagramCopied' | 'diagramCopyFailed' | null
+  >(null);
   const naturalWidth = useMemo(() => naturalDiagramWidth(svg), [svg]);
 
   useEffect(() => {
@@ -73,21 +78,21 @@ export function DiagramFrame({ svg, source, downloadName }: DiagramFrameProps) {
     if (document.fullscreenElement === figure) {
       void document.exitFullscreen().catch(() => undefined);
     } else if (typeof figure.requestFullscreen === 'function') {
-      void figure.requestFullscreen().catch(() => setStatus('Full screen is not available.'));
+      void figure.requestFullscreen().catch(() => setStatus('fullScreenUnavailable'));
     } else {
-      setStatus('Full screen is not available.');
+      setStatus('fullScreenUnavailable');
     }
   };
 
   const copySource = () => {
     const clipboard = typeof navigator === 'undefined' ? undefined : navigator.clipboard;
     if (clipboard === undefined) {
-      setStatus('Copy is not available in this browser.');
+      setStatus('copyUnavailable');
       return;
     }
     void clipboard.writeText(source).then(
-      () => setStatus('Diagram source copied.'),
-      () => setStatus('Diagram source could not be copied.'),
+      () => setStatus('diagramCopied'),
+      () => setStatus('diagramCopyFailed'),
     );
   };
 
@@ -129,11 +134,16 @@ export function DiagramFrame({ svg, source, downloadName }: DiagramFrameProps) {
       ref={figureRef}
       className={`atlas-mermaid${fullScreen ? ' atlas-mermaid--fullscreen' : ''}`}
     >
-      <div className="atlas-mermaid__toolbar" role="toolbar" aria-label="Diagram controls">
+      <div
+        className="atlas-mermaid__toolbar"
+        role="toolbar"
+        aria-label={text.diagramControls}
+        lang={locale}
+      >
         <button
           type="button"
-          aria-label="Zoom out"
-          title="Zoom out"
+          aria-label={text.zoomOut}
+          title={text.zoomOut}
           onClick={() => setZoom(zoomOutLevel)}
         >
           <ZoomOut size={16} aria-hidden="true" />
@@ -141,8 +151,8 @@ export function DiagramFrame({ svg, source, downloadName }: DiagramFrameProps) {
         <button
           type="button"
           className="atlas-mermaid__zoom-value"
-          aria-label="Reset zoom"
-          title="Reset zoom"
+          aria-label={text.resetZoom}
+          title={text.resetZoom}
           onClick={() => setZoom(1)}
         >
           {zoom === 1 ? null : <RotateCcw size={14} aria-hidden="true" />}
@@ -150,8 +160,8 @@ export function DiagramFrame({ svg, source, downloadName }: DiagramFrameProps) {
         </button>
         <button
           type="button"
-          aria-label="Zoom in"
-          title="Zoom in"
+          aria-label={text.zoomIn}
+          title={text.zoomIn}
           onClick={() => setZoom(zoomInLevel)}
         >
           <ZoomIn size={16} aria-hidden="true" />
@@ -159,8 +169,8 @@ export function DiagramFrame({ svg, source, downloadName }: DiagramFrameProps) {
         <span className="atlas-mermaid__toolbar-gap" aria-hidden="true" />
         <button
           type="button"
-          aria-label={fullScreen ? 'Exit full screen' : 'Full screen'}
-          title={fullScreen ? 'Exit full screen' : 'Full screen'}
+          aria-label={fullScreen ? text.exitFullScreen : text.fullScreen}
+          title={fullScreen ? text.exitFullScreen : text.fullScreen}
           onClick={toggleFullScreen}
         >
           {fullScreen ? (
@@ -171,16 +181,16 @@ export function DiagramFrame({ svg, source, downloadName }: DiagramFrameProps) {
         </button>
         <button
           type="button"
-          aria-label="Copy diagram source"
-          title="Copy diagram source"
+          aria-label={text.copyDiagram}
+          title={text.copyDiagram}
           onClick={copySource}
         >
           <Copy size={16} aria-hidden="true" />
         </button>
         <button
           type="button"
-          aria-label="Download SVG"
-          title="Download SVG"
+          aria-label={text.downloadSvg}
+          title={text.downloadSvg}
           onClick={() => downloadText(downloadName, svg, 'image/svg+xml')}
         >
           <Download size={16} aria-hidden="true" />
@@ -190,7 +200,8 @@ export function DiagramFrame({ svg, source, downloadName }: DiagramFrameProps) {
         ref={viewportRef}
         className="atlas-mermaid__viewport"
         tabIndex={0}
-        aria-label="Diagram viewport; scroll or drag to pan"
+        lang={locale}
+        aria-label={text.diagramViewport}
         onPointerDown={startPan}
         onPointerMove={movePan}
         onPointerUp={endPan}
@@ -203,13 +214,13 @@ export function DiagramFrame({ svg, source, downloadName }: DiagramFrameProps) {
           <div
             className="atlas-mermaid__svg"
             role="img"
-            aria-label="Mermaid diagram"
+            aria-label={text.mermaidDiagram}
             dangerouslySetInnerHTML={{ __html: svg }}
           />
         </div>
       </div>
-      <p className="atlas-mermaid__status" role="status" aria-live="polite">
-        {status}
+      <p className="atlas-mermaid__status" role="status" aria-live="polite" lang={locale}>
+        {status === null ? '' : text[status]}
       </p>
     </figure>
   );
@@ -222,6 +233,8 @@ interface MermaidDiagramProps {
 }
 
 export function MermaidDiagram({ source, documentPath }: MermaidDiagramProps) {
+  const text = useFolderMessages();
+  const locale = useFolderLocale();
   const reactId = useId();
   const renderId = `atlas-mermaid-${reactId.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
   const [state, setState] = useState<DiagramState>({ status: 'loading' });
@@ -230,7 +243,7 @@ export function MermaidDiagram({ source, documentPath }: MermaidDiagramProps) {
     let mounted = true;
 
     if (source.length > MAX_MERMAID_SOURCE_CHARS) {
-      setState({ status: 'error', message: 'This diagram is too large to render.' });
+      setState({ status: 'error', message: 'diagramTooLarge' });
       return () => {
         mounted = false;
       };
@@ -272,7 +285,7 @@ export function MermaidDiagram({ source, documentPath }: MermaidDiagramProps) {
         if (mounted) setState({ status: 'ready', svg: safeSvg });
       } catch {
         if (mounted) {
-          setState({ status: 'error', message: 'This Mermaid diagram could not be rendered.' });
+          setState({ status: 'error', message: 'diagramFailed' });
         }
       }
     })();
@@ -295,11 +308,11 @@ export function MermaidDiagram({ source, documentPath }: MermaidDiagramProps) {
   if (state.status === 'error') {
     return (
       <figure className="atlas-mermaid">
-        <p className="atlas-mermaid__error" role="alert">
-          {state.message}
+        <p className="atlas-mermaid__error" role="alert" lang={locale}>
+          {text[state.message]}
         </p>
         <details>
-          <summary>View diagram source</summary>
+          <summary lang={locale}>{text.viewDiagramSource}</summary>
           <pre className="atlas-markdown__code">
             <code>{source}</code>
           </pre>
@@ -309,8 +322,8 @@ export function MermaidDiagram({ source, documentPath }: MermaidDiagramProps) {
   }
 
   return (
-    <span className="atlas-mermaid__loading" role="status">
-      Rendering Mermaid diagram…
+    <span className="atlas-mermaid__loading" role="status" lang={locale}>
+      {text.renderingDiagram}
     </span>
   );
 }
