@@ -1,3 +1,4 @@
+import type { FileType } from '@context-atlas/core';
 export type FolderLocale = 'en' | 'id';
 declare const english: {
     language: string;
@@ -56,6 +57,7 @@ declare const english: {
     size: string;
     modified: string;
     bytes: string;
+    documentLanguageNotice: string;
     binaryPreview: string;
     binaryUnavailable: string;
     binaryHelp: string;
@@ -94,7 +96,11 @@ type FolderMessages = {
 };
 export declare const folderMessages: Record<FolderLocale, FolderMessages>;
 export declare const FolderLocaleContext: import("react").Context<FolderLocale>;
+export declare function formatFolderFileType(type: FileType, locale: FolderLocale): string;
 export declare function resolveFolderLocale(value: string | null): FolderLocale;
+/** Store only the interface preference; documents and paths never enter browser storage. */
+export declare function loadFolderLocale(): FolderLocale;
+export declare function saveFolderLocale(locale: FolderLocale): void;
 export declare function useFolderLocale(): FolderLocale;
 export declare function useFolderMessages(): FolderMessages;
 export declare function formatFolderMessage(template: string, values: Record<string, string | number>): string;

@@ -76,6 +76,12 @@ test.beforeAll(async () => {
   fixtureRoot = await mkdtemp(join(tmpdir(), 'context-atlas-browser-fixture-'));
   await mkdir(join(fixtureRoot, 'docs'));
   await mkdir(join(fixtureRoot, 'assets'));
+  await mkdir(join(fixtureRoot, '.github'));
+  await mkdir(join(fixtureRoot, 'test'));
+  await mkdir(join(fixtureRoot, 'runs'));
+  await writeFile(join(fixtureRoot, '.gitignore'), 'synthetic-example');
+  await writeFile(join(fixtureRoot, 'docs', '.gitkeep'), '');
+  await writeFile(join(fixtureRoot, 'test', 'README.md'), '# Test evidence');
   await writeFile(join(fixtureRoot, 'atlas.json'), JSON.stringify({ title: 'Browser guide' }));
   await writeFile(
     join(fixtureRoot, 'README.md'),
@@ -127,6 +133,7 @@ test('switch interface language without changing the selected document or sendin
   await page.getByRole('combobox', { name: 'Interface language' }).selectOption('id');
   await expect(page.getByRole('navigation', { name: 'Isi folder' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Berkas' })).toBeVisible();
+  await expect(page.getByText('Isi dokumen tetap menggunakan bahasa sumber.')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Lewati ke dokumen' })).toHaveAttribute('lang', 'id');
   await expect(page.locator('.atlas-folder-document__facts')).toHaveAttribute('lang', 'id');
   await expect(page.getByRole('toolbar', { name: 'Kontrol diagram' })).toHaveAttribute(
@@ -153,6 +160,55 @@ test('switch interface language without changing the selected document or sendin
   expect(externalRequests).toEqual([]);
 });
 
+test('remembers only the chosen interface language after reload', async ({ page }) => {
+  await page.goto(cliUrl);
+  await page.getByRole('combobox', { name: 'Interface language' }).selectOption('id');
+  await expect(page.getByRole('navigation', { name: 'Isi folder' })).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByRole('combobox', { name: 'Bahasa antarmuka' })).toHaveValue('id');
+  await expect(page.getByRole('heading', { name: 'Reading this folder' })).toBeVisible();
+  expect(await page.evaluate(() => Object.values(localStorage))).toEqual(['id']);
+});
+
+test('always hide technical entries in navigation while retaining direct access', async ({
+  page,
+}) => {
+  await page.goto(cliUrl);
+  const navigation = page.getByRole('navigation', { name: 'Folder contents' });
+  await expect(navigation.getByRole('button', { name: 'Open .gitignore' })).toHaveCount(0);
+  await expect(navigation.getByRole('button', { name: 'Expand folder .github' })).toHaveCount(0);
+  await expect(navigation.getByRole('button', { name: 'Expand folder test' })).toHaveCount(0);
+  await expect(navigation.getByRole('button', { name: 'Expand folder runs' })).toHaveCount(0);
+  await expect(navigation.getByRole('checkbox', { name: 'Show technical files' })).toHaveCount(0);
+  await navigation.getByRole('button', { name: 'Expand folder docs' }).click();
+  await expect(navigation.getByRole('button', { name: 'Open .gitkeep' })).toHaveCount(0);
+  await expect(navigation.getByRole('button', { name: /Open Nested note/ })).toBeVisible();
+
+  await page.goto(`${cliUrl}/#/folder/.gitignore`);
+  await expect(page.getByRole('heading', { name: '.gitignore', exact: true })).toBeVisible();
+  const response = await page.request.get(`${cliUrl}/atlas/api/file?scope=folder&path=.gitignore`);
+  expect(response.status()).toBe(200);
+  const data = (await response.json()) as { content: string; encoding: string };
+  expect(data.encoding).toBe('base64');
+  expect(Buffer.from(data.content, 'base64').toString()).toBe('synthetic-example');
+});
+
+test('can hide and restore the navigation on a wide screen without changing the document', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(cliUrl);
+  const navigation = page.getByRole('navigation', { name: 'Folder contents' });
+  const hide = page.getByRole('button', { name: 'Hide folder contents' });
+  await expect(hide).toBeVisible();
+  await hide.click();
+  await expect(navigation).toBeHidden();
+  await expect(page.getByRole('heading', { name: 'Reading this folder' })).toBeVisible();
+  await page.getByRole('button', { name: 'Show folder contents' }).click();
+  await expect(navigation).toBeVisible();
+});
+
 test('aligns header controls and keeps both languages usable across viewport sizes', async ({
   page,
 }) => {
@@ -174,6 +230,12 @@ test('aligns header controls and keeps both languages usable across viewport siz
       await expect(search).toBeVisible();
       await expect(language).toBeVisible();
       await expect(badge).toBeVisible();
+      const searchLabelLines = await search.locator('span').evaluate((label) => {
+        const range = document.createRange();
+        range.selectNodeContents(label);
+        return range.getClientRects().length;
+      });
+      expect(searchLabelLines).toBe(1);
       const searchRect = (await search.boundingBox())!;
       const languageRect = (await language.boundingBox())!;
       expect(searchRect.height).toBeGreaterThanOrEqual(44);

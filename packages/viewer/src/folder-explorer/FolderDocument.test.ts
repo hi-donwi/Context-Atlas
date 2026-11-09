@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import type { ContentSource, FileContent } from '@context-atlas/core';
 import { FolderDocument } from './FolderDocument.js';
+import { FolderLocaleContext } from './locale.js';
 
 const source: ContentSource = {
   async describe() {
@@ -106,5 +107,45 @@ describe('FolderDocument', () => {
     expect(tsv).toContain('<td>alpha</td>');
     expect(fenced).toContain('Sort by count');
     expect(fenced).not.toContain('atlas-markdown__code');
+  });
+
+  it('localizes file metadata and explains that document content is not translated', () => {
+    const markup = renderToStaticMarkup(
+      createElement(
+        FolderLocaleContext.Provider,
+        { value: 'id' },
+        createElement(FolderDocument, {
+          path: 'notes.txt',
+          scopeId: 'test',
+          source,
+          onNavigate: () => undefined,
+          file: { path: 'notes.txt', type: 'text', content: 'Original content', size: 1234567 },
+        }),
+      ),
+    );
+
+    expect(markup).toContain('<dt>Jenis</dt><dd>Teks</dd>');
+    expect(markup).toContain('1.234.567 byte');
+    expect(markup).toContain('Isi dokumen tetap menggunakan bahasa sumber.');
+    expect(markup).toContain('Original content');
+  });
+
+  it('uses the selected language for table count formatting', () => {
+    const content = `Item\n${Array.from({ length: 1000 }, (_, index) => `Item ${index}`).join('\n')}`;
+    const markup = renderToStaticMarkup(
+      createElement(
+        FolderLocaleContext.Provider,
+        { value: 'id' },
+        createElement(FolderDocument, {
+          path: 'data.csv',
+          scopeId: 'test',
+          source,
+          onNavigate: () => undefined,
+          file: { path: 'data.csv', type: 'csv', content, size: content.length },
+        }),
+      ),
+    );
+
+    expect(markup.includes('1.000 dari 1.000 baris')).toBe(true);
   });
 });

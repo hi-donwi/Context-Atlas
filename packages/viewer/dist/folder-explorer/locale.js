@@ -24,7 +24,7 @@ const english = {
     fileUnavailable: 'File unavailable',
     retryFile: 'Retry opening file',
     noVisibleFiles: 'No visible files',
-    filesExcluded: 'Files excluded for safety are not shown here.',
+    filesExcluded: 'Technical files are not shown in the navigation.',
     folderOverview: 'Folder overview',
     chooseFile: 'Choose a file to inspect',
     chooseFileHelp: 'Select a file from the folder contents. Markdown and Mermaid are rendered for reading; other text stays inert.',
@@ -33,7 +33,7 @@ const english = {
     collapseFolder: 'Collapse folder {name}',
     loadingDirectory: 'Loading {name}…',
     retryDirectory: 'Retry loading {name}',
-    directoryEmpty: 'This folder is empty.',
+    directoryEmpty: 'This folder has no visible files.',
     openFile: 'Open {name}',
     searchShortcut: 'Search this folder (Ctrl or Command+K)',
     searchFolder: 'Search this folder',
@@ -56,6 +56,7 @@ const english = {
     size: 'Size',
     modified: 'Modified',
     bytes: 'bytes',
+    documentLanguageNotice: 'Document content remains in its original language.',
     binaryPreview: 'Binary file preview',
     binaryUnavailable: 'Binary preview unavailable',
     binaryHelp: 'This file is available as data but is not interpreted in this viewer.',
@@ -114,7 +115,7 @@ const indonesian = {
     fileUnavailable: 'Berkas tidak tersedia',
     retryFile: 'Buka ulang berkas',
     noVisibleFiles: 'Tidak ada berkas yang terlihat',
-    filesExcluded: 'Berkas yang dikecualikan demi keamanan tidak ditampilkan.',
+    filesExcluded: 'Berkas teknis tidak ditampilkan dalam navigasi.',
     folderOverview: 'Ringkasan folder',
     chooseFile: 'Pilih berkas untuk dibaca',
     chooseFileHelp: 'Pilih berkas dari isi folder. Markdown dan Mermaid ditampilkan untuk dibaca; teks lain tetap tidak dijalankan.',
@@ -123,7 +124,7 @@ const indonesian = {
     collapseFolder: 'Tutup folder {name}',
     loadingDirectory: 'Memuat {name}…',
     retryDirectory: 'Muat ulang {name}',
-    directoryEmpty: 'Folder ini kosong.',
+    directoryEmpty: 'Folder ini tidak memiliki berkas yang terlihat.',
     openFile: 'Buka {name}',
     searchShortcut: 'Cari dalam folder ini (Ctrl atau Command+K)',
     searchFolder: 'Cari dalam folder ini',
@@ -146,6 +147,7 @@ const indonesian = {
     size: 'Ukuran',
     modified: 'Diubah',
     bytes: 'byte',
+    documentLanguageNotice: 'Isi dokumen tetap menggunakan bahasa sumber.',
     binaryPreview: 'Pratinjau berkas biner',
     binaryUnavailable: 'Pratinjau biner tidak tersedia',
     binaryHelp: 'Berkas ini tersedia sebagai data, tetapi tidak ditampilkan oleh penampil ini.',
@@ -181,8 +183,48 @@ const indonesian = {
 };
 export const folderMessages = { en: english, id: indonesian };
 export const FolderLocaleContext = createContext('en');
+const fileTypeLabels = {
+    markdown: ['Markdown', 'Markdown'],
+    mermaid: ['Mermaid', 'Mermaid'],
+    json: ['JSON', 'JSON'],
+    jsonl: ['JSONL', 'JSONL'],
+    yaml: ['YAML', 'YAML'],
+    csv: ['CSV', 'CSV'],
+    tsv: ['TSV', 'TSV'],
+    bpmn: ['BPMN', 'BPMN'],
+    image: ['Image', 'Gambar'],
+    pdf: ['PDF', 'PDF'],
+    html: ['HTML', 'HTML'],
+    text: ['Text', 'Teks'],
+    binary: ['Binary', 'Biner'],
+    unknown: ['Unknown', 'Tidak diketahui'],
+};
+export function formatFolderFileType(type, locale) {
+    return fileTypeLabels[type][locale === 'id' ? 1 : 0];
+}
 export function resolveFolderLocale(value) {
     return value === 'id' ? 'id' : 'en';
+}
+const LOCALE_STORAGE_KEY = 'context-atlas.folder.interface-locale';
+/** Store only the interface preference; documents and paths never enter browser storage. */
+export function loadFolderLocale() {
+    try {
+        return typeof window === 'undefined'
+            ? 'en'
+            : resolveFolderLocale(window.localStorage.getItem(LOCALE_STORAGE_KEY));
+    }
+    catch {
+        return 'en';
+    }
+}
+export function saveFolderLocale(locale) {
+    try {
+        if (typeof window !== 'undefined')
+            window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+    }
+    catch {
+        // A blocked or unavailable storage area must not prevent using the viewer.
+    }
 }
 export function useFolderLocale() {
     return useContext(FolderLocaleContext);

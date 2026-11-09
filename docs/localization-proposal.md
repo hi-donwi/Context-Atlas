@@ -19,8 +19,9 @@ translations. Keep current English-only folders and existing hosts working uncha
    translations was approved locally; source identifiers, primary specifications, decisions,
    commit messages and technical identifiers remain English.
 2. **Interface locale:** the folder explorer can switch navigation, accessible names,
-   controls and loading/error/empty states. Dates and numbers currently follow the browser's
-   locale, not the selected interface language. The selection does not translate content.
+   controls, metadata, dates, numbers and loading/error/empty states. The selection does not
+   translate content. A chosen interface language is saved in local browser storage; no document
+   content or paths are stored, and unavailable storage falls back to English.
 3. **Document locale (future design):** an authorized project may provide a derived document
    translation. A future viewer would identify its source, language, review state and freshness,
    and offer the original. The current viewer relies on links and labels in the documents.
@@ -42,8 +43,8 @@ This wording describes the intent; the actual workspace contract remains the aut
 
 ## Candidate behaviour
 
-- Interface and document locale are separate controls. The locale preference may be stored
-  only after its persistence and scope are agreed; it must never store document content.
+- Interface and document locale are separate controls. Only the interface-language preference
+  is stored locally per browser origin; it never stores document content or paths.
 - Locale resources are host-supplied or distributed by the application when permitted by
   the applicable policy. No new translation or AI provider is called by default. Selecting
   a locale cannot send document content, metadata or telemetry to a remote service.
@@ -75,7 +76,7 @@ This wording describes the intent; the actual workspace contract remains the aut
 - Translation mapping convention, metadata format and ownership; source links and hashes
   must remain verifiable even for uncommitted files. No new `atlas.json` key should be used
   until its strict validation and backward compatibility are addressed.
-- Automatic locale selection and whether to persist a language-only preference.
+- Automatic locale selection based on browser preferences.
 - Whether stale translations are displayed with a warning or require an explicit opt-in.
 - The exact reviewer identity and audit workflow for declaring a translation reviewed.
 - Whether local-only machine translation is desired later, with explicit consent, provider
@@ -84,9 +85,9 @@ This wording describes the intent; the actual workspace contract remains the aut
 ## Implementation slices
 
 1. The workspace owner approved the narrow localization policy exception locally.
-2. The initial folder-explorer UI slice provides a locale switcher, English fallback and
-   localized controls. Locale choice is in memory and resets on reload; it does not translate
-   document bodies. The separate graph/snapshot explorer remains outside this slice.
+2. The folder-explorer UI provides a locale switcher, English fallback and localized controls.
+   An explicitly selected interface language persists locally across reloads; document bodies
+   remain unchanged. The separate graph/snapshot explorer remains outside this slice.
 3. Future work: add scoped translated-document association, source/hash freshness checks, original
    fallback, and secure link/diagram handling. Test missing, stale, unsafe, unreviewed and
    changing sources, including non-Git and dirty files.

@@ -1,5 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import { folderMessages, formatFolderMessage, resolveFolderLocale } from './locale.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  folderMessages,
+  formatFolderMessage,
+  loadFolderLocale,
+  resolveFolderLocale,
+  saveFolderLocale,
+} from './locale.js';
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe('folder explorer locale', () => {
   it('provides the same complete message keys for each supported language', () => {
@@ -22,6 +30,23 @@ describe('folder explorer locale', () => {
   it('provides a distinct translation without altering the default English messages', () => {
     expect(folderMessages.en.files).toBe('Files');
     expect(folderMessages.id.files).not.toBe(folderMessages.en.files);
+  });
+
+  it('remembers a language choice without requiring browser storage to be available', () => {
+    const getItem = vi.fn(() => 'id');
+    const setItem = vi.fn();
+    vi.stubGlobal('window', { localStorage: { getItem, setItem } });
+    expect(loadFolderLocale()).toBe('id');
+    saveFolderLocale('en');
+    expect(setItem).toHaveBeenCalledWith('context-atlas.folder.interface-locale', 'en');
+
+    vi.stubGlobal('window', {
+      get localStorage() {
+        throw new Error('Storage is unavailable');
+      },
+    });
+    expect(loadFolderLocale()).toBe('en');
+    expect(() => saveFolderLocale('id')).not.toThrow();
   });
 
   it('preserves the same interpolation fields in both languages', () => {

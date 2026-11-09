@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronDown, FolderPlus, Languages, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import type { ContentSource } from '@context-atlas/core';
 import { FolderDocument } from './folder-explorer/FolderDocument.js';
@@ -6,12 +6,16 @@ import { FolderSearch } from './folder-explorer/FolderSearch.js';
 import { FolderTree } from './folder-explorer/FolderTree.js';
 import {
   FolderLocaleContext,
+  formatFolderFileType,
   formatFolderMessage,
+  loadFolderLocale,
   resolveFolderLocale,
+  saveFolderLocale,
   useFolderMessages,
   type FolderLocale,
 } from './folder-explorer/locale.js';
 import { useFolderExplorer } from './folder-explorer/use-folder-explorer.js';
+import { prioritizeRootEntries, visibleFolderEntries } from './folder-explorer/visible-entries.js';
 
 export interface FolderExplorerProps {
   readonly source: ContentSource;
@@ -20,9 +24,14 @@ export interface FolderExplorerProps {
 /** Read-only browser explorer for a single folder `ContentSource`. */
 export function FolderExplorer({ source }: FolderExplorerProps) {
   const [locale, setLocale] = useState<FolderLocale>('en');
+  useEffect(() => setLocale(loadFolderLocale()), []);
+  const changeLocale = (nextLocale: FolderLocale) => {
+    setLocale(nextLocale);
+    saveFolderLocale(nextLocale);
+  };
   return (
     <FolderLocaleContext.Provider value={locale}>
-      <LocalizedFolderExplorer source={source} locale={locale} onLocaleChange={setLocale} />
+      <LocalizedFolderExplorer source={source} locale={locale} onLocaleChange={changeLocale} />
     </FolderLocaleContext.Provider>
   );
 }
@@ -38,7 +47,9 @@ function LocalizedFolderExplorer({
   const text = useFolderMessages();
   const [navigationOpen, setNavigationOpen] = useState(true);
   const state = useFolderExplorer(source);
-  const rootEntries = state.entriesByDirectory[''] ?? [];
+  const rootEntries = prioritizeRootEntries(
+    visibleFolderEntries(state.entriesByDirectory[''] ?? []),
+  );
 
   return (
     <div className="atlas-folder-explorer">
@@ -92,7 +103,7 @@ function LocalizedFolderExplorer({
         </div>
       </header>
 
-      <div className="atlas-folder-explorer__layout">
+      <div className="atlas-folder-explorer__layout" data-navigation-open={navigationOpen}>
         <nav
           className="atlas-folder-explorer__navigation"
           id="atlas-folder-navigation"
@@ -193,7 +204,9 @@ function LocalizedFolderExplorer({
                     >
                       <span>{entry.name}</span>
                       <span className="atlas-folder-explorer__card-meta">
-                        {entry.kind === 'dir' ? text.folder : entry.type}
+                        {entry.kind === 'dir'
+                          ? text.folder
+                          : formatFolderFileType(entry.type, locale)}
                       </span>
                     </button>
                   </li>

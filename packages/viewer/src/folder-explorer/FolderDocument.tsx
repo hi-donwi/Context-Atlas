@@ -1,8 +1,9 @@
 import type { ContentSource, FileContent } from '@context-atlas/core';
+import { Info } from 'lucide-react';
 import { DelimitedTable } from './DelimitedTable.js';
 import { MarkdownDocument } from './MarkdownDocument.js';
 import { MermaidDiagram } from './MermaidDiagram.js';
-import { useFolderLocale, useFolderMessages } from './locale.js';
+import { formatFolderFileType, useFolderLocale, useFolderMessages } from './locale.js';
 
 interface FolderDocumentProps {
   readonly path: string;
@@ -19,7 +20,7 @@ export function FolderDocument({ path, file, scopeId, source, onNavigate }: Fold
   const modified = file.mtime === undefined ? undefined : new Date(file.mtime);
   const modifiedLabel =
     modified !== undefined && !Number.isNaN(modified.getTime())
-      ? modified.toLocaleString()
+      ? modified.toLocaleString(locale)
       : undefined;
 
   return (
@@ -29,12 +30,12 @@ export function FolderDocument({ path, file, scopeId, source, onNavigate }: Fold
       <dl className="atlas-folder-document__facts" lang={locale}>
         <div>
           <dt>{text.type}</dt>
-          <dd>{file.type}</dd>
+          <dd>{formatFolderFileType(file.type, locale)}</dd>
         </div>
         <div>
           <dt>{text.size}</dt>
           <dd>
-            {file.size.toLocaleString()} {text.bytes}
+            {file.size.toLocaleString(locale)} {text.bytes}
           </dd>
         </div>
         {modifiedLabel !== undefined && (
@@ -44,6 +45,10 @@ export function FolderDocument({ path, file, scopeId, source, onNavigate }: Fold
           </div>
         )}
       </dl>
+      <p className="atlas-folder-document__language-note" lang={locale}>
+        <Info size={15} aria-hidden="true" />
+        <span>{text.documentLanguageNotice}</span>
+      </p>
       {typeof file.content === 'string' && file.type === 'markdown' ? (
         <MarkdownDocument
           content={file.content}
@@ -73,7 +78,8 @@ export function FolderDocument({ path, file, scopeId, source, onNavigate }: Fold
           <h3>{text.binaryUnavailable}</h3>
           <p>{text.binaryHelp}</p>
           <p>
-            {file.type} · {file.size.toLocaleString()} {text.bytes}
+            {formatFolderFileType(file.type, locale)} · {file.size.toLocaleString(locale)}{' '}
+            {text.bytes}
           </p>
         </section>
       )}

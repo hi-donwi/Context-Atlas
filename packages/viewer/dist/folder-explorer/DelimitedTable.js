@@ -24,12 +24,12 @@ export function DelimitedTable({ content, delimiter, label }) {
             ? { column, direction: 'desc' }
             : null);
     return (_jsxs("section", { className: "atlas-table", "aria-label": label, children: [_jsxs("div", { className: "atlas-table__controls", lang: locale, children: [_jsxs("label", { className: "atlas-table__filter", htmlFor: filterId, children: [_jsx("span", { children: text.filter }), _jsx("input", { id: filterId, type: "search", "aria-label": text.filterRows, value: query, onChange: (event) => setQuery(event.target.value) })] }), _jsxs("p", { className: "atlas-table__count", role: "status", "aria-live": "polite", children: [formatFolderMessage(text.rowCount, {
-                                visible: visibleRows.length.toLocaleString(),
-                                total: table.rows.length.toLocaleString(),
+                                visible: visibleRows.length.toLocaleString(locale),
+                                total: table.rows.length.toLocaleString(locale),
                             }), table.truncated
                                 ? formatFolderMessage(text.rowLimit, {
-                                    shown: table.rows.length.toLocaleString(),
-                                    total: table.totalRows.toLocaleString(),
+                                    shown: table.rows.length.toLocaleString(locale),
+                                    total: table.totalRows.toLocaleString(locale),
                                 })
                                 : ''] })] }), _jsx("div", { className: "atlas-table__scroll", tabIndex: 0, "aria-label": formatFolderMessage(text.scrollable, { name: label }), children: _jsxs("table", { children: [_jsx("thead", { children: _jsx("tr", { children: table.header.map((name, column) => {
                                     const active = sort?.column === column ? sort.direction : undefined;

@@ -60,13 +60,13 @@ export function DelimitedTable({ content, delimiter, label }: DelimitedTableProp
         </label>
         <p className="atlas-table__count" role="status" aria-live="polite">
           {formatFolderMessage(text.rowCount, {
-            visible: visibleRows.length.toLocaleString(),
-            total: table.rows.length.toLocaleString(),
+            visible: visibleRows.length.toLocaleString(locale),
+            total: table.rows.length.toLocaleString(locale),
           })}
           {table.truncated
             ? formatFolderMessage(text.rowLimit, {
-                shown: table.rows.length.toLocaleString(),
-                total: table.totalRows.toLocaleString(),
+                shown: table.rows.length.toLocaleString(locale),
+                total: table.totalRows.toLocaleString(locale),
               })
             : ''}
         </p>
