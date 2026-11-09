@@ -1,9 +1,16 @@
 import { useState } from 'react';
-import { FolderPlus, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { ChevronDown, FolderPlus, Languages, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import type { ContentSource } from '@context-atlas/core';
 import { FolderDocument } from './folder-explorer/FolderDocument.js';
 import { FolderSearch } from './folder-explorer/FolderSearch.js';
 import { FolderTree } from './folder-explorer/FolderTree.js';
+import {
+  FolderLocaleContext,
+  formatFolderMessage,
+  resolveFolderLocale,
+  useFolderMessages,
+  type FolderLocale,
+} from './folder-explorer/locale.js';
 import { useFolderExplorer } from './folder-explorer/use-folder-explorer.js';
 
 export interface FolderExplorerProps {
@@ -12,55 +19,101 @@ export interface FolderExplorerProps {
 
 /** Read-only browser explorer for a single folder `ContentSource`. */
 export function FolderExplorer({ source }: FolderExplorerProps) {
+  const [locale, setLocale] = useState<FolderLocale>('en');
+  return (
+    <FolderLocaleContext.Provider value={locale}>
+      <LocalizedFolderExplorer source={source} locale={locale} onLocaleChange={setLocale} />
+    </FolderLocaleContext.Provider>
+  );
+}
+
+function LocalizedFolderExplorer({
+  source,
+  locale,
+  onLocaleChange,
+}: FolderExplorerProps & {
+  readonly locale: FolderLocale;
+  readonly onLocaleChange: (locale: FolderLocale) => void;
+}) {
+  const text = useFolderMessages();
   const [navigationOpen, setNavigationOpen] = useState(true);
   const state = useFolderExplorer(source);
   const rootEntries = state.entriesByDirectory[''] ?? [];
 
   return (
     <div className="atlas-folder-explorer">
-      <a className="atlas-folder-explorer__skip-link" href="#atlas-folder-main">
-        Skip to document
+      <a className="atlas-folder-explorer__skip-link" href="#atlas-folder-main" lang={locale}>
+        {text.skip}
       </a>
-      <header className="atlas-folder-explorer__header">
+      <header className="atlas-folder-explorer__header" lang={locale}>
         <div className="atlas-folder-explorer__brand">
-          <span className="atlas-folder-explorer__eyebrow">Context Atlas · Local folder</span>
-          <h1>{state.info?.title ?? 'Context Atlas'}</h1>
+          <span className="atlas-folder-explorer__eyebrow">{text.localFolder}</span>
+          <div className="atlas-folder-explorer__brand-title">
+            <h1>{state.info?.title ?? 'Context Atlas'}</h1>
+            <span className="atlas-folder-explorer__read-only">{text.readOnly}</span>
+          </div>
         </div>
-        <FolderSearch source={source} scopeId={state.scopeId} onOpenFile={state.selectFile} />
-        <span className="atlas-folder-explorer__read-only">Read only</span>
-        <button
-          className="atlas-folder-explorer__navigation-toggle"
-          type="button"
-          aria-expanded={navigationOpen}
-          aria-controls="atlas-folder-navigation"
-          onClick={() => setNavigationOpen((open) => !open)}
-        >
-          {navigationOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
-          <span>{navigationOpen ? 'Hide folder contents' : 'Show folder contents'}</span>
-        </button>
+        <div className="atlas-folder-explorer__actions">
+          <FolderSearch source={source} scopeId={state.scopeId} onOpenFile={state.selectFile} />
+          <label className="atlas-folder-explorer__locale">
+            <span className="atlas-folder-explorer__visually-hidden">{text.language}</span>
+            <Languages
+              className="atlas-folder-explorer__locale-icon"
+              size={16}
+              aria-hidden="true"
+            />
+            <select
+              value={locale}
+              onChange={(event) => onLocaleChange(resolveFolderLocale(event.currentTarget.value))}
+            >
+              <option value="en" lang="en">
+                {text.english}
+              </option>
+              <option value="id" lang="id">
+                {text.indonesian}
+              </option>
+            </select>
+            <ChevronDown
+              className="atlas-folder-explorer__locale-chevron"
+              size={16}
+              aria-hidden="true"
+            />
+          </label>
+          <button
+            className="atlas-folder-explorer__navigation-toggle"
+            type="button"
+            aria-expanded={navigationOpen}
+            aria-controls="atlas-folder-navigation"
+            onClick={() => setNavigationOpen((open) => !open)}
+          >
+            {navigationOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+            <span>{navigationOpen ? text.hideContents : text.showContents}</span>
+          </button>
+        </div>
       </header>
 
       <div className="atlas-folder-explorer__layout">
         <nav
           className="atlas-folder-explorer__navigation"
           id="atlas-folder-navigation"
-          aria-label="Folder contents"
+          aria-label={text.folderContents}
+          lang={locale}
           data-open={navigationOpen}
         >
-          <h2>Files</h2>
+          <h2>{text.files}</h2>
           {state.sourceLoading ? (
             <p className="atlas-folder-explorer__muted" role="status">
-              Loading folder contents…
+              {text.loadingContents}
             </p>
           ) : state.sourceError !== null ? (
             <div className="atlas-folder-explorer__inline-error">
-              <p role="alert">{state.sourceError}</p>
+              <p role="alert">{text.sourceError}</p>
               <button type="button" onClick={state.reloadSource}>
-                Retry
+                {text.retry}
               </button>
             </div>
           ) : rootEntries.length === 0 ? (
-            <p className="atlas-folder-explorer__muted">This folder has no visible files.</p>
+            <p className="atlas-folder-explorer__muted">{text.emptyFolder}</p>
           ) : (
             <FolderTree
               entries={rootEntries}
@@ -83,27 +136,27 @@ export function FolderExplorer({ source }: FolderExplorerProps) {
           aria-busy={state.sourceLoading || state.fileLoading}
         >
           {state.sourceLoading ? (
-            <p className="atlas-folder-explorer__status" role="status">
-              Loading folder…
+            <p className="atlas-folder-explorer__status" role="status" lang={locale}>
+              {text.loadingFolder}
             </p>
           ) : state.sourceError !== null ? (
-            <section className="atlas-folder-explorer__state">
-              <h2>Folder unavailable</h2>
-              <p>The local folder source could not be reached.</p>
+            <section className="atlas-folder-explorer__state" lang={locale}>
+              <h2>{text.folderUnavailable}</h2>
+              <p>{text.folderUnreachable}</p>
               <button type="button" onClick={state.reloadSource}>
-                Retry loading folder
+                {text.retryFolder}
               </button>
             </section>
           ) : state.fileLoading ? (
-            <p className="atlas-folder-explorer__status" role="status">
-              Opening {state.selectedPath}…
+            <p className="atlas-folder-explorer__status" role="status" lang={locale}>
+              {formatFolderMessage(text.openingFile, { name: state.selectedPath ?? '' })}
             </p>
           ) : state.fileError !== null ? (
-            <section className="atlas-folder-explorer__state" role="alert">
-              <h2>File unavailable</h2>
-              <p>{state.fileError}</p>
+            <section className="atlas-folder-explorer__state" role="alert" lang={locale}>
+              <h2>{text.fileUnavailable}</h2>
+              <p>{text.fileError}</p>
               <button type="button" onClick={state.retryFile}>
-                Retry opening file
+                {text.retryFile}
               </button>
             </section>
           ) : state.selectedFile !== null &&
@@ -117,19 +170,16 @@ export function FolderExplorer({ source }: FolderExplorerProps) {
               onNavigate={state.selectFile}
             />
           ) : rootEntries.length === 0 ? (
-            <section className="atlas-folder-explorer__state">
+            <section className="atlas-folder-explorer__state" lang={locale}>
               <FolderPlus size={24} aria-hidden="true" />
-              <h2>No visible files</h2>
-              <p>Files excluded for safety are not shown here.</p>
+              <h2>{text.noVisibleFiles}</h2>
+              <p>{text.filesExcluded}</p>
             </section>
           ) : (
-            <section className="atlas-folder-explorer__landing">
-              <p className="atlas-folder-explorer__eyebrow">Folder overview</p>
-              <h2>Choose a file to inspect</h2>
-              <p className="atlas-folder-explorer__muted">
-                Select a file from the folder contents. Markdown and Mermaid are rendered for
-                reading; other text stays inert.
-              </p>
+            <section className="atlas-folder-explorer__landing" lang={locale}>
+              <p className="atlas-folder-explorer__eyebrow">{text.folderOverview}</p>
+              <h2>{text.chooseFile}</h2>
+              <p className="atlas-folder-explorer__muted">{text.chooseFileHelp}</p>
               <ul className="atlas-folder-explorer__cards">
                 {rootEntries.map((entry) => (
                   <li key={entry.path}>
@@ -143,7 +193,7 @@ export function FolderExplorer({ source }: FolderExplorerProps) {
                     >
                       <span>{entry.name}</span>
                       <span className="atlas-folder-explorer__card-meta">
-                        {entry.kind === 'dir' ? 'Folder' : entry.type}
+                        {entry.kind === 'dir' ? text.folder : entry.type}
                       </span>
                     </button>
                   </li>

@@ -2,6 +2,7 @@ import type { ContentSource, FileContent } from '@context-atlas/core';
 import { DelimitedTable } from './DelimitedTable.js';
 import { MarkdownDocument } from './MarkdownDocument.js';
 import { MermaidDiagram } from './MermaidDiagram.js';
+import { useFolderLocale, useFolderMessages } from './locale.js';
 
 interface FolderDocumentProps {
   readonly path: string;
@@ -12,6 +13,8 @@ interface FolderDocumentProps {
 }
 
 export function FolderDocument({ path, file, scopeId, source, onNavigate }: FolderDocumentProps) {
+  const text = useFolderMessages();
+  const locale = useFolderLocale();
   const name = path.split('/').at(-1) ?? path;
   const modified = file.mtime === undefined ? undefined : new Date(file.mtime);
   const modifiedLabel =
@@ -23,18 +26,20 @@ export function FolderDocument({ path, file, scopeId, source, onNavigate }: Fold
     <article className="atlas-folder-document" aria-labelledby="atlas-folder-document-title">
       <p className="atlas-folder-document__path">{path}</p>
       <h2 id="atlas-folder-document-title">{name}</h2>
-      <dl className="atlas-folder-document__facts">
+      <dl className="atlas-folder-document__facts" lang={locale}>
         <div>
-          <dt>Type</dt>
+          <dt>{text.type}</dt>
           <dd>{file.type}</dd>
         </div>
         <div>
-          <dt>Size</dt>
-          <dd>{file.size.toLocaleString()} bytes</dd>
+          <dt>{text.size}</dt>
+          <dd>
+            {file.size.toLocaleString()} {text.bytes}
+          </dd>
         </div>
         {modifiedLabel !== undefined && (
           <div>
-            <dt>Modified</dt>
+            <dt>{text.modified}</dt>
             <dd>{modifiedLabel}</dd>
           </div>
         )}
@@ -60,11 +65,15 @@ export function FolderDocument({ path, file, scopeId, source, onNavigate }: Fold
           <code>{file.content}</code>
         </pre>
       ) : (
-        <section className="atlas-folder-document__binary" aria-label="Binary file preview">
-          <h3>Binary preview unavailable</h3>
-          <p>This file is available as data but is not interpreted in this viewer.</p>
+        <section
+          className="atlas-folder-document__binary"
+          aria-label={text.binaryPreview}
+          lang={locale}
+        >
+          <h3>{text.binaryUnavailable}</h3>
+          <p>{text.binaryHelp}</p>
           <p>
-            {file.type} · {file.size.toLocaleString()} bytes
+            {file.type} · {file.size.toLocaleString()} {text.bytes}
           </p>
         </section>
       )}

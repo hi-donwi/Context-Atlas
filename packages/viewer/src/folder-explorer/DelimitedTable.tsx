@@ -1,6 +1,7 @@
 import { useId, useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import { filterRows, parseDelimited, sortRows, type SortDirection } from './delimited.js';
+import { formatFolderMessage, useFolderLocale, useFolderMessages } from './locale.js';
 
 interface DelimitedTableProps {
   readonly content: string;
@@ -16,6 +17,8 @@ interface SortState {
 
 /** A read-only table for CSV or TSV text with sorting, filtering, and a row count. */
 export function DelimitedTable({ content, delimiter, label }: DelimitedTableProps) {
+  const text = useFolderMessages();
+  const locale = useFolderLocale();
   const filterId = useId();
   const table = useMemo(() => parseDelimited(content, delimiter), [content, delimiter]);
   const [query, setQuery] = useState('');
@@ -26,7 +29,11 @@ export function DelimitedTable({ content, delimiter, label }: DelimitedTableProp
   }, [query, sort, table.rows]);
 
   if (table.header.length === 0) {
-    return <p className="atlas-table__empty">This table has no rows.</p>;
+    return (
+      <p className="atlas-table__empty" lang={locale}>
+        {text.emptyTable}
+      </p>
+    );
   }
 
   const toggleSort = (column: number) =>
@@ -40,25 +47,35 @@ export function DelimitedTable({ content, delimiter, label }: DelimitedTableProp
 
   return (
     <section className="atlas-table" aria-label={label}>
-      <div className="atlas-table__controls">
+      <div className="atlas-table__controls" lang={locale}>
         <label className="atlas-table__filter" htmlFor={filterId}>
-          <span>Filter</span>
+          <span>{text.filter}</span>
           <input
             id={filterId}
             type="search"
-            aria-label="Filter rows"
+            aria-label={text.filterRows}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
         </label>
         <p className="atlas-table__count" role="status" aria-live="polite">
-          {visibleRows.length.toLocaleString()} of {table.rows.length.toLocaleString()} rows
+          {formatFolderMessage(text.rowCount, {
+            visible: visibleRows.length.toLocaleString(),
+            total: table.rows.length.toLocaleString(),
+          })}
           {table.truncated
-            ? ` (first ${table.rows.length.toLocaleString()} of ${table.totalRows.toLocaleString()} shown)`
+            ? formatFolderMessage(text.rowLimit, {
+                shown: table.rows.length.toLocaleString(),
+                total: table.totalRows.toLocaleString(),
+              })
             : ''}
         </p>
       </div>
-      <div className="atlas-table__scroll" tabIndex={0} aria-label={`${label}, scrollable`}>
+      <div
+        className="atlas-table__scroll"
+        tabIndex={0}
+        aria-label={formatFolderMessage(text.scrollable, { name: label })}
+      >
         <table>
           <thead>
             <tr>
@@ -77,7 +94,8 @@ export function DelimitedTable({ content, delimiter, label }: DelimitedTableProp
                     <button
                       type="button"
                       onClick={() => toggleSort(column)}
-                      aria-label={`Sort by ${name}`}
+                      lang={locale}
+                      aria-label={formatFolderMessage(text.sortBy, { name })}
                     >
                       <span>{name}</span>
                       <Icon size={14} aria-hidden="true" />

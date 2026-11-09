@@ -7,6 +7,7 @@ import { DelimitedTable } from './DelimitedTable.js';
 import { MermaidDiagram } from './MermaidDiagram.js';
 import { formatExplorerLocation } from './path-state.js';
 import { isSafeRasterImageContent, resolveMarkdownTarget } from './markdown-targets.js';
+import { formatFolderMessage, useFolderLocale, useFolderMessages } from './locale.js';
 function textContent(children) {
     return Children.toArray(children)
         .map((child) => {
@@ -31,6 +32,8 @@ function headingSlug(children) {
     return slug || 'section';
 }
 function MarkdownImage({ source, scopeId, documentPath, src, alt, title }) {
+    const text = useFolderMessages();
+    const locale = useFolderLocale();
     const path = src === undefined ? undefined : resolveMarkdownTarget(documentPath, src)?.path;
     const [image, setImage] = useState(null);
     const [failedPath, setFailedPath] = useState(null);
@@ -73,8 +76,8 @@ function MarkdownImage({ source, scopeId, documentPath, src, alt, title }) {
         return (_jsx("img", { className: "atlas-markdown__image", src: image.url, alt: alt ?? '', title: title, loading: "lazy", decoding: "async" }));
     }
     const label = alt ? `: ${alt}` : '';
-    const status = path !== undefined && failedPath !== path ? 'Loading image' : 'Image not loaded';
-    return (_jsxs("span", { className: "atlas-markdown__image-placeholder", children: [status, label] }));
+    const status = path !== undefined && failedPath !== path ? text.loadingImage : text.imageUnavailable;
+    return (_jsxs("span", { className: "atlas-markdown__image-placeholder", lang: locale, children: [status, label] }));
 }
 function markdownComponents(context) {
     const headingIds = new Set();
@@ -114,7 +117,7 @@ function markdownComponents(context) {
                 const language = /(?:^|\s)language-([^\s]+)/.exec(code.props.className ?? '')?.[1];
                 const fence = language?.toLowerCase();
                 if (fence === 'csv' || fence === 'tsv') {
-                    return (_jsx(DelimitedTable, { content: textContent(code.props.children), delimiter: fence === 'csv' ? ',' : '\t', label: `${fence.toUpperCase()} table` }));
+                    return (_jsx(DelimitedTable, { content: textContent(code.props.children), delimiter: fence === 'csv' ? ',' : '\t', label: formatFolderMessage(context.tableLabel, { type: fence.toUpperCase() }) }));
                 }
                 if (fence === 'mermaid') {
                     return (_jsx(MermaidDiagram, { source: textContent(code.props.children), documentPath: context.path }));
@@ -153,11 +156,19 @@ function markdownComponents(context) {
     };
 }
 function FrontmatterCard({ fields }) {
+    const text = useFolderMessages();
     if (fields.length === 0)
         return null;
-    return (_jsx("section", { className: "atlas-frontmatter", "aria-label": "Document metadata", children: _jsx("dl", { children: fields.map((field, index) => (_jsxs("div", { children: [_jsx("dt", { children: field.key }), _jsx("dd", { children: field.kind === 'structured' ? (_jsx("pre", { className: "atlas-frontmatter__structured", children: field.value })) : (field.value) })] }, `${field.key}-${index}`))) }) }));
+    return (_jsx("section", { className: "atlas-frontmatter", "aria-label": text.metadata, children: _jsx("dl", { children: fields.map((field, index) => (_jsxs("div", { children: [_jsx("dt", { children: field.key }), _jsx("dd", { children: field.kind === 'structured' ? (_jsx("pre", { className: "atlas-frontmatter__structured", children: field.value })) : (field.value) })] }, `${field.key}-${index}`))) }) }));
 }
 export function MarkdownDocument({ content, path, scopeId, source, onNavigate, }) {
+    const text = useFolderMessages();
     const frontmatter = splitFrontmatter(content);
-    return (_jsxs("div", { className: "atlas-markdown", children: [frontmatter !== undefined && _jsx(FrontmatterCard, { fields: frontmatter.fields }), _jsx(Markdown, { remarkPlugins: [remarkGfm], components: markdownComponents({ path, scopeId, source, onNavigate }), skipHtml: true, children: frontmatter?.body ?? content })] }));
+    return (_jsxs("div", { className: "atlas-markdown", children: [frontmatter !== undefined && _jsx(FrontmatterCard, { fields: frontmatter.fields }), _jsx(Markdown, { remarkPlugins: [remarkGfm], components: markdownComponents({
+                    path,
+                    scopeId,
+                    source,
+                    onNavigate,
+                    tableLabel: text.tableLabel,
+                }), skipHtml: true, children: frontmatter?.body ?? content })] }));
 }

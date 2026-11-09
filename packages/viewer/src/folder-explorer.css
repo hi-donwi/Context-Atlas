@@ -28,7 +28,8 @@
 }
 
 .atlas-folder-explorer button:focus-visible,
-.atlas-folder-explorer a:focus-visible {
+.atlas-folder-explorer a:focus-visible,
+.atlas-folder-explorer select:focus-visible {
   outline: 3px solid var(--atlas-folder-accent);
   outline-offset: 3px;
 }
@@ -58,7 +59,8 @@
 .atlas-folder-explorer__header {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.9rem 1.5rem;
   min-block-size: 5.25rem;
   padding: 0.9rem clamp(1rem, 3vw, 2.5rem);
   border-block-end: 1px solid var(--atlas-folder-border);
@@ -66,7 +68,25 @@
 
 .atlas-folder-explorer__brand {
   min-inline-size: 0;
-  flex: 1 1 auto;
+  flex: 1 1 16rem;
+}
+
+.atlas-folder-explorer__brand-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.75rem;
+}
+
+.atlas-folder-explorer__actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  min-inline-size: 0;
+  max-inline-size: 100%;
 }
 
 .atlas-folder-explorer__eyebrow {
@@ -80,6 +100,7 @@
 }
 
 .atlas-folder-explorer__brand h1 {
+  min-inline-size: 0;
   max-inline-size: 70ch;
   font-size: clamp(1.2rem, 0.95rem + 0.8vw, 1.7rem);
   line-height: 1.2;
@@ -87,16 +108,59 @@
 
 .atlas-folder-explorer__read-only {
   flex: 0 0 auto;
-  padding: 0.3rem 0.65rem;
+  padding: 0.1rem 0.55rem;
   border: 1px solid var(--atlas-folder-border);
   border-radius: 999px;
   color: var(--atlas-folder-muted);
-  font-size: 0.75rem;
+  background: var(--atlas-folder-canvas);
+  font-size: 0.7rem;
   font-weight: 600;
 }
 
-.atlas-folder-search {
+.atlas-folder-explorer__locale {
   position: relative;
+  display: inline-flex;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  color: var(--atlas-folder-muted);
+}
+
+.atlas-folder-explorer__locale select {
+  appearance: none;
+  min-inline-size: 0;
+  min-block-size: 2.75rem;
+  max-inline-size: 100%;
+  padding: 0.45rem 2.2rem;
+  border: 1px solid var(--atlas-folder-border);
+  border-radius: 0.5rem;
+  color: var(--atlas-folder-ink);
+  background: var(--atlas-folder-paper);
+  font: inherit;
+  cursor: pointer;
+}
+
+.atlas-folder-explorer__locale select:hover {
+  border-color: var(--atlas-folder-accent);
+  background: var(--atlas-folder-canvas);
+}
+
+.atlas-folder-explorer__locale-icon,
+.atlas-folder-explorer__locale-chevron {
+  position: absolute;
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.atlas-folder-explorer__locale-icon {
+  inset-inline-start: 0.75rem;
+}
+
+.atlas-folder-explorer__locale-chevron {
+  inset-inline-end: 0.7rem;
+}
+
+.atlas-folder-search {
   flex: 0 0 auto;
 }
 
@@ -192,7 +256,8 @@
   opacity: 0.7;
 }
 
-.atlas-folder-search__visually-hidden {
+.atlas-folder-search__visually-hidden,
+.atlas-folder-explorer__visually-hidden {
   position: absolute;
   inline-size: 1px;
   block-size: 1px;
@@ -925,25 +990,29 @@
 }
 
 @media (max-width: 760px) {
-  .atlas-folder-explorer__header {
-    flex-wrap: wrap;
-  }
-
   .atlas-folder-explorer__brand {
-    flex-basis: calc(100% - 8rem);
+    flex-basis: 100%;
   }
 
-  .atlas-folder-explorer__read-only {
-    margin-inline-start: auto;
+  .atlas-folder-explorer__actions {
+    flex: 1 1 100%;
+    justify-content: flex-start;
   }
 
   .atlas-folder-search {
-    order: 1;
+    flex: 1 1 4rem;
+    min-inline-size: 0;
+  }
+
+  .atlas-folder-search__trigger {
+    inline-size: 100%;
+    min-inline-size: 0;
+    justify-content: center;
   }
 
   .atlas-folder-explorer__navigation-toggle {
     display: inline-flex;
-    order: 1;
+    flex: 1 1 auto;
   }
 
   .atlas-folder-explorer__layout {
@@ -977,18 +1046,8 @@
     inline-size: 100%;
   }
 
-  .atlas-folder-search {
-    flex: 1 1 auto;
-  }
-
-  .atlas-folder-search__trigger {
-    inline-size: 100%;
-    justify-content: center;
-  }
-
-  .atlas-folder-search__panel {
-    inset-inline-start: 0;
-    inline-size: calc(100vw - 1.7rem);
+  .atlas-folder-search__trigger kbd {
+    display: none;
   }
 
   .atlas-folder-document__source,

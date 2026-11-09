@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Search, X } from 'lucide-react';
 import { normalizeSearchQuery, type ContentSource, type SearchHit } from '@context-atlas/core';
+import { formatFolderMessage, useFolderMessages } from './locale.js';
 
 interface FolderSearchProps {
   readonly source: ContentSource;
@@ -10,11 +11,14 @@ interface FolderSearchProps {
 
 /** Local, keyboard-accessible search for one already-authorized folder scope. */
 export function FolderSearch({ source, scopeId, onOpenFile }: FolderSearchProps) {
+  const text = useFolderMessages();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [hits, setHits] = useState<SearchHit[] | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<'invalidQuery' | 'searchUnavailable' | 'searchFailed' | null>(
+    null,
+  );
   const inputRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const requestId = useRef(0);
@@ -52,12 +56,12 @@ export function FolderSearch({ source, scopeId, onOpenFile }: FolderSearchProps)
     const normalizedQuery = normalizeSearchQuery(query);
     if (normalizedQuery === undefined) {
       setHits(null);
-      setError('Enter a search query of 1–200 characters.');
+      setError('invalidQuery');
       return;
     }
     if (scopeId === null || source.search === undefined) {
       setHits(null);
-      setError('Search is unavailable for this folder.');
+      setError('searchUnavailable');
       return;
     }
 
@@ -70,7 +74,7 @@ export function FolderSearch({ source, scopeId, onOpenFile }: FolderSearchProps)
       if (requestId.current === currentRequest) setHits(results);
     } catch {
       if (requestId.current === currentRequest) {
-        setError('Search could not be completed. Check the local folder and try again.');
+        setError('searchFailed');
       }
     } finally {
       if (requestId.current === currentRequest) setLoading(false);
@@ -87,19 +91,19 @@ export function FolderSearch({ source, scopeId, onOpenFile }: FolderSearchProps)
         type="button"
         aria-expanded={open}
         aria-controls="atlas-folder-search-panel"
-        aria-label="Search this folder (Ctrl or Command+K)"
+        aria-label={text.searchShortcut}
         aria-keyshortcuts="Control+K Meta+K"
         onClick={() => (open ? close() : setOpen(true))}
       >
         <Search size={16} aria-hidden="true" />
-        <span>Search</span>
+        <span>{text.search}</span>
         <kbd aria-hidden="true">⌘/Ctrl K</kbd>
       </button>
 
       <section
         className="atlas-folder-search__panel"
         id="atlas-folder-search-panel"
-        aria-label="Search this folder"
+        aria-label={text.searchFolder}
         hidden={!open}
       >
         <form className="atlas-folder-search__form" role="search" onSubmit={search}>
@@ -107,58 +111,65 @@ export function FolderSearch({ source, scopeId, onOpenFile }: FolderSearchProps)
             className="atlas-folder-search__visually-hidden"
             htmlFor="atlas-folder-search-input"
           >
-            Search files in this folder
+            {text.searchFiles}
           </label>
           <input
             ref={inputRef}
             id="atlas-folder-search-input"
             type="search"
             value={query}
-            placeholder="Search files in this folder…"
+            placeholder={text.searchPlaceholder}
             autoComplete="off"
             onChange={(event) =>
               setQuery(Array.from(event.currentTarget.value).slice(0, 200).join(''))
             }
           />
           <button className="atlas-folder-search__submit" type="submit" disabled={loading}>
-            Search
+            {text.search}
           </button>
           <button className="atlas-folder-search__close" type="button" onClick={close}>
             <X size={16} aria-hidden="true" />
-            <span className="atlas-folder-search__visually-hidden">Close search</span>
+            <span className="atlas-folder-search__visually-hidden">{text.closeSearch}</span>
           </button>
         </form>
 
         {loading ? (
           <p className="atlas-folder-search__message" role="status" aria-live="polite">
-            Searching this folder…
+            {text.searching}
           </p>
         ) : error !== null ? (
           <p
             className="atlas-folder-search__message atlas-folder-search__message--error"
             role="alert"
           >
-            {error}
+            {text[error]}
           </p>
         ) : hits !== null && hits.length === 0 ? (
           <p className="atlas-folder-search__message" role="status" aria-live="polite">
-            No matching files found.
+            {text.noResults}
           </p>
         ) : hits !== null ? (
           <>
             <p className="atlas-folder-search__summary" role="status" aria-live="polite">
-              {hits.length} {hits.length === 1 ? 'result' : 'results'}
+              {hits.length} {hits.length === 1 ? text.resultOne : text.resultMany}
             </p>
-            <ul className="atlas-folder-search__results" aria-label="Search results">
+            <ul className="atlas-folder-search__results" aria-label={text.searchResults}>
               {hits.map((hit) => {
                 const title = hit.title ?? hit.path;
-                const line = hit.line === undefined ? '' : `, line ${hit.line}`;
+                const line =
+                  hit.line === undefined
+                    ? ''
+                    : formatFolderMessage(text.line, { number: hit.line });
                 return (
                   <li key={hit.path}>
                     <button
                       className="atlas-folder-search__result"
                       type="button"
-                      aria-label={`Open ${title} at ${hit.path}${line}`}
+                      aria-label={formatFolderMessage(text.openResult, {
+                        name: title,
+                        path: hit.path,
+                        line,
+                      })}
                       onClick={() => {
                         onOpenFile(hit.path);
                         close();
@@ -174,7 +185,7 @@ export function FolderSearch({ source, scopeId, onOpenFile }: FolderSearchProps)
             </ul>
           </>
         ) : (
-          <p className="atlas-folder-search__message">Search only reads this local folder.</p>
+          <p className="atlas-folder-search__message">{text.localSearch}</p>
         )}
       </section>
     </div>
