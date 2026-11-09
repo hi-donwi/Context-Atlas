@@ -1,14 +1,16 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { FileText, Folder, FolderOpen } from 'lucide-react';
 import { formatFolderMessage, useFolderMessages } from './locale.js';
+import { visibleFolderEntries } from './visible-entries.js';
 export function FolderTree(props) {
-    return (_jsx("ul", { className: "atlas-folder-tree", children: props.entries.map((entry) => (_jsx(TreeEntry, { entry: entry, ...props }, entry.path))) }));
+    return (_jsx("ul", { className: "atlas-folder-tree", children: visibleFolderEntries(props.entries).map((entry) => (_jsx(TreeEntry, { entry: entry, ...props }, entry.path))) }));
 }
 function TreeEntry({ entry, ...props }) {
     const text = useFolderMessages();
     if (entry.kind === 'dir') {
         const expanded = props.expandedDirectories.has(entry.path);
-        const children = props.entriesByDirectory[entry.path];
+        const entries = props.entriesByDirectory[entry.path];
+        const children = entries === undefined ? undefined : visibleFolderEntries(entries);
         const loading = props.loadingDirectories.has(entry.path);
         const error = props.directoryErrors[entry.path];
         const Icon = expanded ? FolderOpen : Folder;

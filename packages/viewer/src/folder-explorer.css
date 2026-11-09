@@ -29,6 +29,7 @@
 
 .atlas-folder-explorer button:focus-visible,
 .atlas-folder-explorer a:focus-visible,
+.atlas-folder-explorer input:focus-visible,
 .atlas-folder-explorer select:focus-visible {
   outline: 3px solid var(--atlas-folder-accent);
   outline-offset: 3px;
@@ -189,12 +190,16 @@
   font: 0.7rem/1.4 var(--atlas-folder-mono);
 }
 
+.atlas-folder-search__trigger > span {
+  white-space: nowrap;
+}
+
 .atlas-folder-search__panel {
   position: absolute;
   z-index: 5;
   inset-block-start: calc(100% + 0.5rem);
   inset-inline-end: 0;
-  inline-size: min(34rem, calc(100vw - 2rem));
+  inline-size: min(34rem, 100%);
   max-block-size: min(70dvh, 34rem);
   overflow: auto;
   padding: 0.75rem;
@@ -325,7 +330,7 @@
 }
 
 .atlas-folder-explorer__navigation-toggle {
-  display: none;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
@@ -336,21 +341,40 @@
   background: var(--atlas-folder-paper);
 }
 
+.atlas-folder-explorer__navigation-toggle:hover {
+  border-color: var(--atlas-folder-accent);
+  background: var(--atlas-folder-canvas);
+}
+
 .atlas-folder-explorer__layout {
   display: grid;
   grid-template-columns: minmax(15rem, 20rem) minmax(0, 1fr);
   min-block-size: calc(100dvh - 5.25rem);
 }
 
+.atlas-folder-explorer__layout[data-navigation-open='false'] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .atlas-folder-explorer__navigation {
+  position: sticky;
+  inset-block-start: 0;
+  align-self: start;
   min-inline-size: 0;
+  min-block-size: calc(100dvh - 5.25rem);
+  max-block-size: 100dvh;
+  overflow: auto;
   padding: 1.5rem 1rem;
   border-inline-end: 1px solid var(--atlas-folder-border);
   background: var(--atlas-folder-canvas);
 }
 
+.atlas-folder-explorer__navigation[data-open='false'] {
+  display: none;
+}
+
 .atlas-folder-explorer__navigation h2 {
-  margin-block-end: 1rem;
+  margin-block-end: 0.5rem;
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -428,7 +452,7 @@
   align-items: center;
   gap: 0.65rem;
   inline-size: 100%;
-  min-block-size: 2.5rem;
+  min-block-size: 2.75rem;
   padding: 0.45rem 0.55rem;
   border: 1px solid transparent;
   border-radius: 0.45rem;
@@ -447,10 +471,16 @@
   font-size: 0.78rem;
 }
 
-.atlas-folder-tree__button:hover,
-.atlas-folder-tree__button[aria-current='page'] {
+.atlas-folder-tree__button:hover {
   border-color: var(--atlas-folder-border);
   background: var(--atlas-folder-paper);
+}
+
+.atlas-folder-tree__button[aria-current='page'] {
+  border-color: #a9c8ba;
+  color: var(--atlas-folder-accent);
+  background: #e5f0e9;
+  font-weight: 650;
 }
 
 .atlas-folder-tree__button svg {
@@ -497,10 +527,11 @@
   font: 0.8rem/1.5 var(--atlas-folder-mono);
 }
 
-.atlas-folder-document h2 {
-  margin-block-end: 1rem;
-  font-size: clamp(1.5rem, 1.1rem + 1.3vw, 2.25rem);
-  line-height: 1.2;
+.atlas-folder-document > h2 {
+  margin-block-end: 0.75rem;
+  font-size: 1.05rem;
+  font-weight: 650;
+  line-height: 1.35;
 }
 
 .atlas-folder-document__facts {
@@ -528,6 +559,21 @@
   margin: 0;
 }
 
+.atlas-folder-document__language-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  max-inline-size: 76ch;
+  margin-block: -0.5rem 1.5rem !important;
+  color: var(--atlas-folder-muted);
+  font-size: 0.8rem;
+}
+
+.atlas-folder-document__language-note svg {
+  flex: 0 0 auto;
+  margin-block-start: 0.2rem;
+}
+
 .atlas-folder-document__source,
 .atlas-markdown__code {
   max-block-size: min(72dvh, 60rem);
@@ -549,6 +595,13 @@
   color: var(--atlas-folder-ink);
   font-size: 1rem;
   line-height: 1.75;
+}
+
+.atlas-markdown > p,
+.atlas-markdown > ul,
+.atlas-markdown > ol,
+.atlas-markdown > blockquote {
+  max-inline-size: 78ch;
 }
 
 .atlas-markdown > :first-child {
@@ -1021,6 +1074,8 @@
   }
 
   .atlas-folder-explorer__navigation {
+    position: static;
+    min-block-size: 0;
     max-block-size: 42dvh;
     overflow: auto;
     border-inline-end: 0;
@@ -1036,6 +1091,12 @@
   }
 }
 
+@media (max-width: 480px) {
+  .atlas-folder-search__trigger kbd {
+    display: none;
+  }
+}
+
 @media (max-width: 380px) {
   .atlas-folder-explorer__header {
     gap: 0.65rem;
@@ -1044,10 +1105,6 @@
 
   .atlas-folder-explorer__navigation-toggle {
     inline-size: 100%;
-  }
-
-  .atlas-folder-search__trigger kbd {
-    display: none;
   }
 
   .atlas-folder-document__source,

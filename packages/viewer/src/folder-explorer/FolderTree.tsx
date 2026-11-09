@@ -1,6 +1,7 @@
 import { FileText, Folder, FolderOpen } from 'lucide-react';
 import type { Entry } from '@context-atlas/core';
 import { formatFolderMessage, useFolderMessages } from './locale.js';
+import { visibleFolderEntries } from './visible-entries.js';
 
 interface FolderTreeProps {
   readonly entries: readonly Entry[];
@@ -17,7 +18,7 @@ interface FolderTreeProps {
 export function FolderTree(props: FolderTreeProps) {
   return (
     <ul className="atlas-folder-tree">
-      {props.entries.map((entry) => (
+      {visibleFolderEntries(props.entries).map((entry) => (
         <TreeEntry key={entry.path} entry={entry} {...props} />
       ))}
     </ul>
@@ -28,7 +29,8 @@ function TreeEntry({ entry, ...props }: FolderTreeProps & { readonly entry: Entr
   const text = useFolderMessages();
   if (entry.kind === 'dir') {
     const expanded = props.expandedDirectories.has(entry.path);
-    const children = props.entriesByDirectory[entry.path];
+    const entries = props.entriesByDirectory[entry.path];
+    const children = entries === undefined ? undefined : visibleFolderEntries(entries);
     const loading = props.loadingDirectories.has(entry.path);
     const error = props.directoryErrors[entry.path];
     const Icon = expanded ? FolderOpen : Folder;

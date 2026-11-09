@@ -53,10 +53,30 @@ test.beforeAll(async () => {
       '```mermaid\nflowchart LR\n  A[Read the guide] --> B[Open the data]\n```\n',
   );
   await writeFile(
+    join(fixtureRoot, 'guide', 'schedule.md'),
+    '# Draft schedule\n\n' +
+      '```mermaid\ntimeline\n  title Milestones\n  November : Design review\n  December : Test cycle\n```\n\n' +
+      '```mermaid\ngantt\n  title Work plan\n  dateFormat YYYY-MM-DD\n  section Delivery\n  Design review :2026-11-02, 2026-11-06\n  Test cycle :2026-12-01, 2026-12-11\n```\n',
+  );
+  await writeFile(
     join(fixtureRoot, 'data', 'endpoints.csv'),
     'method,path\nPOST,/orders\nGET,/health\nGET,/orders/10\nGET,/orders/9\n',
   );
   await startCli(fixtureRoot);
+});
+
+test('renders timeline and Gantt schedules with readable labels and diagram controls', async ({
+  page,
+}) => {
+  await page.goto(cliUrl);
+  await page.getByRole('button', { name: 'Expand folder guide' }).click();
+  await page.getByRole('button', { name: 'Open Draft schedule (schedule.md)' }).click();
+  await expect(page.getByRole('heading', { name: 'Draft schedule', level: 1 })).toBeVisible();
+  const diagrams = page.getByRole('img', { name: 'Mermaid diagram' });
+  await expect(diagrams).toHaveCount(2);
+  await expect(diagrams.nth(0)).toContainText('Design review');
+  await expect(diagrams.nth(1)).toContainText('Test cycle');
+  await expect(page.getByRole('toolbar', { name: 'Diagram controls' })).toHaveCount(2);
 });
 
 test.afterAll(async () => {
