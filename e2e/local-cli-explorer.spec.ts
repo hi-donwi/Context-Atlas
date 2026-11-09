@@ -209,6 +209,26 @@ test('can hide and restore the navigation on a wide screen without changing the 
   await expect(navigation).toBeVisible();
 });
 
+test('keeps search inside the viewport when header actions wrap to a new row', async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 800 });
+  await page.goto(cliUrl);
+  await expect(page.getByRole('heading', { name: 'Browser guide' })).toBeVisible();
+
+  // Emulate a wrapped header even when the platform's font happens to be narrower.
+  await page.locator('.atlas-folder-explorer__brand').evaluate((brand: HTMLElement) => {
+    brand.style.flexBasis = '100%';
+  });
+  await page.locator('.atlas-folder-explorer').evaluate((explorer: HTMLElement) => {
+    explorer.style.fontSize = '13px';
+  });
+  await page.getByRole('button', { name: /Search this folder/ }).click();
+  const panel = page.getByRole('region', { name: 'Search this folder' });
+  await expect(panel).toBeVisible();
+  const panelRect = (await panel.boundingBox())!;
+  expect(panelRect.x).toBeGreaterThanOrEqual(0);
+  expect(panelRect.x + panelRect.width).toBeLessThanOrEqual(768);
+});
+
 test('aligns header controls and keeps both languages usable across viewport sizes', async ({
   page,
 }) => {
