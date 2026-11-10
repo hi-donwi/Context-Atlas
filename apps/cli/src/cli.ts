@@ -1,4 +1,4 @@
-import { resolve } from 'node:path';
+import { isAbsolute, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openFolderSource, startLocalApiServer } from '@context-atlas/source-node';
 import type { LocalApiServer } from '@context-atlas/source-node';
@@ -18,6 +18,22 @@ export interface CliOutput {
 export interface CliRuntimeOptions {
   /** Override the installed browser bundle directory for tests or embedded hosts. */
   readonly uiDirectory?: string;
+  /** Directory a relative folder argument is resolved against; defaults to `process.cwd()`. */
+  readonly currentDirectory?: string;
+}
+
+/**
+ * The directory the reader typed the command in. npm runs scripts from the package root, so
+ * `npm start -- ../notes` would otherwise resolve against this repository instead of the
+ * reader's shell; npm records the original directory in `INIT_CWD`.
+ */
+export function invocationDirectory(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+  cwd = process.cwd(),
+): string {
+  const initial = env.INIT_CWD;
+  if (env.npm_lifecycle_event === undefined || initial === undefined) return cwd;
+  return initial !== '' && isAbsolute(initial) ? initial : cwd;
 }
 
 /** An invalid command-line invocation, safe to print without a stack trace. */
@@ -68,7 +84,7 @@ export async function runCli(
   output: CliOutput = { log: (message) => console.log(message) },
   runtime: CliRuntimeOptions = {},
 ): Promise<LocalApiServer | undefined> {
-  const options = parseCliArgs(args);
+  const options = parseCliArgs(args, runtime.currentDirectory);
   if (options.help) {
     output.log(USAGE);
     return undefined;

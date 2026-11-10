@@ -2,7 +2,32 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { CliUsageError, parseCliArgs, runCli } from './cli.js';
+import { CliUsageError, invocationDirectory, parseCliArgs, runCli } from './cli.js';
+
+describe('invocationDirectory', () => {
+  it('uses the directory npm was invoked from when an npm script starts the CLI', () => {
+    expect(
+      invocationDirectory(
+        { npm_lifecycle_event: 'start', INIT_CWD: '/home/reader/notes' },
+        '/repo',
+      ),
+    ).toBe('/home/reader/notes');
+  });
+
+  it('uses the process directory outside npm scripts', () => {
+    expect(invocationDirectory({ INIT_CWD: '/home/reader/notes' }, '/repo')).toBe('/repo');
+    expect(invocationDirectory({}, '/repo')).toBe('/repo');
+  });
+
+  it('ignores an empty or relative npm invocation directory', () => {
+    expect(invocationDirectory({ npm_lifecycle_event: 'start', INIT_CWD: '' }, '/repo')).toBe(
+      '/repo',
+    );
+    expect(
+      invocationDirectory({ npm_lifecycle_event: 'start', INIT_CWD: 'relative/dir' }, '/repo'),
+    ).toBe('/repo');
+  });
+});
 
 describe('parseCliArgs', () => {
   it('defaults to the current directory and an available port', () => {

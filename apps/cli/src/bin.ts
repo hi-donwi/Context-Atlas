@@ -1,8 +1,10 @@
 #!/usr/bin/env node
-import { CLI_USAGE, CliUsageError, runCli } from './cli.js';
+import { CLI_USAGE, CliUsageError, invocationDirectory, runCli } from './cli.js';
 
 try {
-  const server = await runCli(process.argv.slice(2));
+  const server = await runCli(process.argv.slice(2), undefined, {
+    currentDirectory: invocationDirectory(),
+  });
   if (server !== undefined) {
     const shutdown = (): void => {
       void server
