@@ -3,7 +3,11 @@ import { basename, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { MAX_FILE_SIZE_BYTES } from '@context-atlas/core';
-import { FileSystemSourceError, openFolderSource } from './filesystem-source.js';
+import {
+  FileSystemContentSource,
+  FileSystemSourceError,
+  openFolderSource,
+} from './filesystem-source.js';
 
 describe('openFolderSource', () => {
   let root: string;
@@ -177,6 +181,34 @@ describe('openFolderSource', () => {
 
     await expect(source.list('folder', '')).resolves.toEqual([]);
     await expect(source.read('folder', 'public.md')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  it('hides configured top-level paths from listings, reads, aliases, and search', async () => {
+    await mkdir(join(root, 'groups', 'east'), { recursive: true });
+    await writeFile(join(root, 'groups', 'east', 'plan.md'), '# Hidden plan\n\nquartz');
+    await writeFile(join(root, 'groupsnote.md'), '# Visible\n\nquartz');
+    await symlink(join(root, 'groups', 'east'), join(root, 'alias'));
+    const source = await FileSystemContentSource.open(root, { hiddenPaths: ['groups'] });
+
+    await expect(source.list('folder', '')).resolves.toMatchObject([{ path: 'groupsnote.md' }]);
+    await expect(source.list('folder', 'groups')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(source.read('folder', 'groups/east/plan.md')).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+    await expect(source.read('folder', 'alias/plan.md')).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+    await expect(source.search('folder', 'quartz')).resolves.toMatchObject([
+      { path: 'groupsnote.md' },
+    ]);
+  });
+
+  it('can skip atlas.json so a mounted folder never fails on its own metadata', async () => {
+    await writeFile(join(root, 'atlas.json'), JSON.stringify({ include: ['*.md'] }));
+    await expect(openFolderSource(root)).rejects.toMatchObject({ code: 'UNSUPPORTED_METADATA' });
+
+    const source = await FileSystemContentSource.open(root, { readMetadata: false });
+    await expect(source.describe()).resolves.toMatchObject({ title: basename(root) });
   });
 
   it('lists oversized files as metadata only and refuses to read them', async () => {

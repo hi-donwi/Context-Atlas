@@ -51,6 +51,18 @@ describe('parseCliArgs', () => {
     });
   });
 
+  it('accepts one project lock for a workspace context', () => {
+    expect(parseCliArgs(['--project', 'site', '/ctx'], '/workspace')).toEqual({
+      help: false,
+      rootPath: '/ctx',
+      port: 0,
+      project: 'site',
+    });
+    expect(parseCliArgs(['/ctx', '--project=site.api'], '/workspace')).toMatchObject({
+      project: 'site.api',
+    });
+  });
+
   it('returns help without opening a folder', () => {
     expect(parseCliArgs(['--help'], '/workspace')).toEqual({ help: true });
     expect(parseCliArgs(['-h'], '/workspace')).toEqual({ help: true });
@@ -63,6 +75,11 @@ describe('parseCliArgs', () => {
     ['--port', '1.5'],
     ['--host', '0.0.0.0'],
     ['one', 'two'],
+    ['--project'],
+    ['--project', ''],
+    ['--project', '../other'],
+    ['--project', 'a/b'],
+    ['--project', 'a', '--project', 'b'],
   ])('rejects unsafe or malformed arguments %s', (...args) => {
     expect(() => parseCliArgs(args, '/workspace')).toThrow(CliUsageError);
   });
@@ -101,6 +118,32 @@ describe('runCli', () => {
     expect(messages.join(' ')).not.toContain(root);
     await expect(fetch(server?.url ?? '')).resolves.toMatchObject({ status: 200 });
     await server?.close();
+  });
+
+  it('serves a workspace context locked to one project', async () => {
+    await writeFile(join(root, 'registry.tsv'), 'key\tclient\nsite\tacme\nshop\tacme\n');
+    await mkdir(join(root, 'memory', 'projects', 'site'), { recursive: true });
+    await writeFile(join(root, 'memory', 'projects', 'site', 'active.md'), '# Site');
+    const server = await runCli(
+      ['--project', 'site', root],
+      { log: () => {} },
+      {
+        uiDirectory: uiRoot,
+      },
+    );
+
+    const response = await fetch(`${server?.url}/atlas/api/info`);
+    await expect(response.json()).resolves.toMatchObject({
+      profile: 'workspace',
+      scopes: [{ id: 'project:site', defaultDocument: 'memory/active.md' }],
+    });
+    await server?.close();
+  });
+
+  it('refuses a project lock outside a workspace context', async () => {
+    await expect(
+      runCli(['--project', 'site', root], { log: () => {} }, { uiDirectory: uiRoot }),
+    ).rejects.toMatchObject({ code: 'NOT_A_WORKSPACE' });
   });
 
   it('prints usage and does not start a server when help is requested', async () => {

@@ -57,6 +57,8 @@ export type FileSystemSourceErrorCode =
   | 'INVALID_QUERY'
   | 'INVALID_METADATA'
   | 'UNSUPPORTED_METADATA'
+  | 'NOT_A_WORKSPACE'
+  | 'UNKNOWN_PROJECT'
   | 'FILESYSTEM_ERROR';
 
 /** A safe error from a filesystem source operation; messages never include absolute paths. */
@@ -87,6 +89,10 @@ function errorMessage(code: FileSystemSourceErrorCode): string {
       return 'The folder metadata file is invalid.';
     case 'UNSUPPORTED_METADATA':
       return 'The folder metadata contains settings not supported by this source.';
+    case 'NOT_A_WORKSPACE':
+      return 'A project can only be selected in a workspace context folder (registry.tsv and memory/projects/).';
+    case 'UNKNOWN_PROJECT':
+      return 'The requested project is not in the workspace registry.';
     case 'FILESYSTEM_ERROR':
       return 'The filesystem operation could not be completed.';
   }
@@ -153,7 +159,11 @@ function mapFilesystemError(error: unknown): FileSystemSourceError {
   return new FileSystemSourceError('FILESYSTEM_ERROR');
 }
 
-async function resolveWithinScope(rootPath: string, scopePath: string): Promise<ResolvedPath> {
+async function resolveWithinScope(
+  rootPath: string,
+  scopePath: string,
+  excluded: (path: string) => boolean = isExcludedPath,
+): Promise<ResolvedPath> {
   if (scopePath.length > MAX_RELATIVE_PATH_LENGTH) {
     throw new FileSystemSourceError('INVALID_PATH');
   }
@@ -170,7 +180,7 @@ async function resolveWithinScope(rootPath: string, scopePath: string): Promise<
 
   if (!isPathWithinRoot(rootPath, absolutePath)) throw new FileSystemSourceError('NOT_FOUND');
   const resolvedScopePath = toScopePath(rootPath, absolutePath);
-  if (resolvedScopePath !== '' && isExcludedPath(resolvedScopePath)) {
+  if (resolvedScopePath !== '' && excluded(resolvedScopePath)) {
     throw new FileSystemSourceError('NOT_FOUND');
   }
   return { absolutePath, scopePath: resolvedScopePath };
@@ -311,6 +321,23 @@ async function readMarkdownTitle(
   }
 }
 
+/** Options for opening one folder, used when a workspace scope mounts several folders. */
+export interface FolderOpenOptions {
+  /** Read the folder's optional `atlas.json`; defaults to true. Mounted folders skip it. */
+  readonly readMetadata?: boolean;
+  /** Top-level names inside the folder that are neither listed nor served, like the denylist. */
+  readonly hiddenPaths?: readonly string[];
+}
+
+function exclusionFor(hiddenPaths: readonly string[] = []): (path: string) => boolean {
+  const hidden = hiddenPaths.filter(
+    (name) => /^[^/]+$/.test(name) && name !== '.' && name !== '..',
+  );
+  if (hidden.length === 0) return isExcludedPath;
+  return (path) =>
+    isExcludedPath(path) || hidden.some((name) => path === name || path.startsWith(`${name}/`));
+}
+
 /** A Node-only `ContentSource` for one local folder. Open it before handing it to a host or CLI. */
 export class FileSystemContentSource implements ContentSource {
   private searchIndexPromise: Promise<MiniSearch<SearchDocument>> | undefined;
@@ -318,13 +345,17 @@ export class FileSystemContentSource implements ContentSource {
   private constructor(
     private readonly rootPath: string,
     private readonly info: SourceInfo,
+    private readonly excluded: (path: string) => boolean,
   ) {}
 
   /**
    * Resolve and validate a folder root; optional `atlas.json` may supply a display title and
    * a default document.
    */
-  static async open(rootPath: string): Promise<FileSystemContentSource> {
+  static async open(
+    rootPath: string,
+    options: FolderOpenOptions = {},
+  ): Promise<FileSystemContentSource> {
     if (rootPath.trim() === '') throw new FileSystemSourceError('INVALID_ROOT');
 
     let resolvedRoot: string;
@@ -337,7 +368,7 @@ export class FileSystemContentSource implements ContentSource {
       throw new FileSystemSourceError('INVALID_ROOT');
     }
 
-    const metadata = await readFolderMetadata(resolvedRoot);
+    const metadata = options.readMetadata === false ? {} : await readFolderMetadata(resolvedRoot);
     const title = metadata.title ?? (basename(resolvedRoot) || 'Folder');
     return new FileSystemContentSource(
       resolvedRoot,
@@ -347,6 +378,7 @@ export class FileSystemContentSource implements ContentSource {
           ? {}
           : { defaultDocument: metadata.defaultDocument }),
       }),
+      exclusionFor(options.hiddenPaths),
     );
   }
 
@@ -367,11 +399,11 @@ export class FileSystemContentSource implements ContentSource {
     if (normalizedDir.length > MAX_RELATIVE_PATH_LENGTH) {
       throw new FileSystemSourceError('INVALID_PATH');
     }
-    if (normalizedDir !== '' && isExcludedPath(normalizedDir)) {
+    if (normalizedDir !== '' && this.excluded(normalizedDir)) {
       throw new FileSystemSourceError('NOT_FOUND');
     }
 
-    const resolvedDirectory = await resolveWithinScope(this.rootPath, normalizedDir);
+    const resolvedDirectory = await resolveWithinScope(this.rootPath, normalizedDir, this.excluded);
     let directoryStat;
     let children;
     try {
@@ -386,12 +418,12 @@ export class FileSystemContentSource implements ContentSource {
     const entries: Entry[] = [];
     for (const child of children) {
       const path = normalizedDir === '' ? child.name : `${normalizedDir}/${child.name}`;
-      if (path.length > MAX_RELATIVE_PATH_LENGTH || isExcludedPath(path)) continue;
+      if (path.length > MAX_RELATIVE_PATH_LENGTH || this.excluded(path)) continue;
 
       let resolvedChild: ResolvedPath;
       let childStat;
       try {
-        resolvedChild = await resolveWithinScope(this.rootPath, path);
+        resolvedChild = await resolveWithinScope(this.rootPath, path, this.excluded);
         childStat = await stat(resolvedChild.absolutePath);
       } catch {
         continue;
@@ -432,11 +464,11 @@ export class FileSystemContentSource implements ContentSource {
       if (error instanceof UnsafePathError) throw new FileSystemSourceError('INVALID_PATH');
       throw error;
     }
-    if (normalizedPath.length > MAX_RELATIVE_PATH_LENGTH || isExcludedPath(normalizedPath)) {
+    if (normalizedPath.length > MAX_RELATIVE_PATH_LENGTH || this.excluded(normalizedPath)) {
       throw new FileSystemSourceError('NOT_FOUND');
     }
 
-    const resolved = await resolveWithinScope(this.rootPath, normalizedPath);
+    const resolved = await resolveWithinScope(this.rootPath, normalizedPath, this.excluded);
     const { bytes, mtime } = await readStableFile(resolved.absolutePath, MAX_FILE_SIZE_BYTES);
     const type = detectFileType(normalizedPath);
     const content = TEXT_TYPES.has(type) ? bytes.toString('utf8') : new Uint8Array(bytes);
@@ -513,7 +545,7 @@ export class FileSystemContentSource implements ContentSource {
     };
 
     const queueVisiblePath = (scopePath: string): void => {
-      void resolveWithinScope(this.rootPath, scopePath)
+      void resolveWithinScope(this.rootPath, scopePath, this.excluded)
         .then(async (resolved) => {
           const entryStat = await stat(resolved.absolutePath);
           if (entryStat.isFile() || entryStat.isDirectory()) queueChange(scopePath);
@@ -554,7 +586,7 @@ export class FileSystemContentSource implements ContentSource {
               } else {
                 try {
                   const safePath = normalizeRelativePath(path);
-                  if (!isExcludedPath(safePath)) queueVisiblePath(safePath);
+                  if (!this.excluded(safePath)) queueVisiblePath(safePath);
                 } catch (error) {
                   if (error instanceof UnsafePathError) queueChange(undefined);
                   else throw error;
@@ -600,7 +632,7 @@ export class FileSystemContentSource implements ContentSource {
           if (!child.isDirectory() && !child.isSymbolicLink()) continue;
           const path =
             directory.scopePath === '' ? child.name : `${directory.scopePath}/${child.name}`;
-          if (path.length > MAX_RELATIVE_PATH_LENGTH || isExcludedPath(path)) continue;
+          if (path.length > MAX_RELATIVE_PATH_LENGTH || this.excluded(path)) continue;
           try {
             normalizeRelativePath(path);
           } catch {
@@ -610,7 +642,7 @@ export class FileSystemContentSource implements ContentSource {
           let resolved: ResolvedPath;
           let childStat;
           try {
-            resolved = await resolveWithinScope(this.rootPath, path);
+            resolved = await resolveWithinScope(this.rootPath, path, this.excluded);
             childStat = await stat(resolved.absolutePath);
           } catch {
             continue;

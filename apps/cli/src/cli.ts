@@ -1,14 +1,17 @@
 import { isAbsolute, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { openFolderSource, startLocalApiServer } from '@context-atlas/source-node';
+import { openContextSource, startLocalApiServer } from '@context-atlas/source-node';
 import type { LocalApiServer } from '@context-atlas/source-node';
 
-const USAGE = 'Usage: context-atlas [folder] [--port <port>]';
+const USAGE = 'Usage: context-atlas [folder] [--port <port>] [--project <key>]';
+const PROJECT_KEY = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
 export interface CliOptions {
   readonly help: false;
   readonly rootPath: string;
   readonly port: number;
+  /** Lock a workspace context to one registered project's scope. */
+  readonly project?: string;
 }
 
 export interface CliOutput {
@@ -54,6 +57,7 @@ export function parseCliArgs(
   let folder: string | undefined;
   let port = 0;
   let portProvided = false;
+  let project: string | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index]!;
@@ -67,6 +71,14 @@ export function parseCliArgs(
       continue;
     }
 
+    if (argument === '--project' || argument.startsWith('--project=')) {
+      if (project !== undefined) throw new CliUsageError();
+      const value = argument === '--project' ? args[++index] : argument.slice('--project='.length);
+      if (value === undefined || !PROJECT_KEY.test(value)) throw new CliUsageError();
+      project = value;
+      continue;
+    }
+
     if (argument.startsWith('-') || folder !== undefined) throw new CliUsageError();
     folder = argument;
   }
@@ -75,6 +87,7 @@ export function parseCliArgs(
     help: false,
     rootPath: resolve(currentDirectory, folder ?? '.'),
     port,
+    ...(project === undefined ? {} : { project }),
   };
 }
 
@@ -90,7 +103,10 @@ export async function runCli(
     return undefined;
   }
 
-  const source = await openFolderSource(options.rootPath);
+  const source = await openContextSource(
+    options.rootPath,
+    options.project === undefined ? {} : { project: options.project },
+  );
   const uiDirectory = runtime.uiDirectory ?? fileURLToPath(new URL('./ui/', import.meta.url));
   const server = await startLocalApiServer(source, { port: options.port, uiDirectory });
   output.log(`Context Atlas API listening at ${server.url}`);

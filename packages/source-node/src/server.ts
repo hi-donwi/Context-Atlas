@@ -106,6 +106,8 @@ function errorDetails(code: ApiErrorCode): { readonly status: number; readonly d
     case 'INVALID_ROOT':
     case 'INVALID_METADATA':
     case 'UNSUPPORTED_METADATA':
+    case 'NOT_A_WORKSPACE':
+    case 'UNKNOWN_PROJECT':
     case 'FILESYSTEM_ERROR':
       return { status: 500, detail: 'The local source could not complete the request.' };
   }
