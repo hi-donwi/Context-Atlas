@@ -11,7 +11,7 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "start": "npm run build:cli --silent && node apps/cli/dist/bin.js",
+    "start": "node scripts/start.mjs",
     "build:cli": "npm run build --workspace @context-atlas/core && npm run build --workspace @context-atlas/source-node && npm run build --workspace @context-atlas/cli-ui && npm run build --workspace @context-atlas/cli",
     "dev:demo": "npm run dev --workspace @context-atlas/demo",
     "build": "npm run build --workspace @context-atlas/core && npm run build --workspace @context-atlas/source-node && npm run build --workspace @context-atlas/model && npm run build --workspace @context-atlas/adapter-openapi && npm run build --workspace @context-atlas/viewer && npm run build --workspace @context-atlas/cli-ui && npm run build --workspace @context-atlas/demo && npm run build --workspace @context-atlas/cli",
