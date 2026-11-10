@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { isExcludedPath, normalizeRelativePath, UnsafePathError, } from '@context-atlas/core';
+import { isExcludedPath, normalizeRelativePath, UnsafePathError, } from 'context-atlas-core';
 import { findDefaultDocument, formatExplorerLocation, parseExplorerLocation, } from './path-state.js';
 export function planChangedPaths(paths, cachedDirectories, expandedDirectories, selectedPath) {
     const visibleDirectories = new Set([...cachedDirectories, ...expandedDirectories]);

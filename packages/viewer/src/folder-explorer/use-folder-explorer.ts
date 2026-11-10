@@ -7,7 +7,7 @@ import {
   type Entry,
   type FileContent,
   type SourceInfo,
-} from '@context-atlas/core';
+} from 'context-atlas-core';
 import {
   findDefaultDocument,
   formatExplorerLocation,

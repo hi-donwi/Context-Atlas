@@ -1,4 +1,4 @@
-import type { ContentSource } from '@context-atlas/core';
+import type { ContentSource } from 'context-atlas-core';
 export interface FolderExplorerProps {
     readonly source: ContentSource;
 }

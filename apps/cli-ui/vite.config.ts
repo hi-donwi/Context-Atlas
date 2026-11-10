@@ -14,7 +14,7 @@ export default defineConfig({
         ),
       },
       {
-        find: /^@context-atlas\/core$/,
+        find: /^context-atlas-core$/,
         replacement: fileURLToPath(new URL('../../packages/core/src/index.ts', import.meta.url)),
       },
       {

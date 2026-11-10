@@ -3,8 +3,8 @@ import {
   MAX_FILE_SIZE_BYTES,
   normalizeRelativePath,
   UnsafePathError,
-} from '@context-atlas/core';
-import type { FileContent } from '@context-atlas/core';
+} from 'context-atlas-core';
+import type { FileContent } from 'context-atlas-core';
 
 export interface MarkdownTarget {
   readonly path: string;

@@ -1,4 +1,4 @@
-import type { Entry } from '@context-atlas/core';
+import type { Entry } from 'context-atlas-core';
 
 const TECHNICAL_DIRECTORIES = new Set([
   '.agents',

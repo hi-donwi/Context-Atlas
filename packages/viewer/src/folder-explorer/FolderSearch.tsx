@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Search, X } from 'lucide-react';
-import { normalizeSearchQuery, type ContentSource, type SearchHit } from '@context-atlas/core';
+import { normalizeSearchQuery, type ContentSource, type SearchHit } from 'context-atlas-core';
 import { formatFolderMessage, useFolderMessages } from './locale.js';
 
 interface FolderSearchProps {

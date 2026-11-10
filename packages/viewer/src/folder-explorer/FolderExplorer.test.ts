@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ContentSource } from '@context-atlas/core';
+import type { ContentSource } from 'context-atlas-core';
 import { FolderExplorer } from '../FolderExplorer.js';
 
 const source: ContentSource = {

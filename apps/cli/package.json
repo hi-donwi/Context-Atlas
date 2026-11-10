@@ -1,8 +1,21 @@
 {
-  "name": "@context-atlas/cli",
+  "name": "context-atlas-cli",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
+  "description": "Read-only local explorer for Context Atlas project folders",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hi-donwi/Context-Atlas.git",
+    "directory": "apps/cli"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "bin": {
     "context-atlas": "./dist/bin.js"
   },
@@ -10,6 +23,6 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@context-atlas/source-node": "0.1.0"
+    "context-atlas-source-node": "0.1.0"
   }
 }

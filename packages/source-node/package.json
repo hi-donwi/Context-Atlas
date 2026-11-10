@@ -1,8 +1,17 @@
 {
-  "name": "@context-atlas/source-node",
+  "name": "context-atlas-source-node",
   "version": "0.1.0",
   "type": "module",
+  "description": "Node.js filesystem sources and local API server for Context Atlas",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hi-donwi/Context-Atlas.git",
+    "directory": "packages/source-node"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "files": [
     "dist"
   ],
@@ -16,7 +25,7 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@context-atlas/core": "0.1.0",
+    "context-atlas-core": "0.1.0",
     "minisearch": "7.2.0"
   }
 }

@@ -8,7 +8,7 @@ import {
 } from 'react';
 import Markdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { splitFrontmatter, type ContentSource, type FrontmatterField } from '@context-atlas/core';
+import { splitFrontmatter, type ContentSource, type FrontmatterField } from 'context-atlas-core';
 import { DelimitedTable } from './DelimitedTable.js';
 import { MermaidDiagram } from './MermaidDiagram.js';
 import { formatExplorerLocation } from './path-state.js';

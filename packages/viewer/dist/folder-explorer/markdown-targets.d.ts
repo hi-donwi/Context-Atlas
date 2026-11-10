@@ -1,4 +1,4 @@
-import type { FileContent } from '@context-atlas/core';
+import type { FileContent } from 'context-atlas-core';
 export interface MarkdownTarget {
     readonly path: string;
     readonly fragment?: string;

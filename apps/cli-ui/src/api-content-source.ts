@@ -6,13 +6,13 @@ import type {
   SearchHit,
   ScopeInfo,
   SourceInfo,
-} from '@context-atlas/core';
+} from 'context-atlas-core';
 import {
   isExcludedPath,
   MAX_SEARCH_SNIPPET_CHARS,
   normalizeRelativePath,
   UnsafePathError,
-} from '@context-atlas/core';
+} from 'context-atlas-core';
 
 const API_PREFIX = '/atlas/api';
 

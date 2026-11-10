@@ -1,7 +1,7 @@
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
-import { normalizeSearchQuery } from '@context-atlas/core';
+import { normalizeSearchQuery } from 'context-atlas-core';
 import { formatFolderMessage, useFolderMessages } from './locale.js';
 /** Local, keyboard-accessible search for one already-authorized folder scope. */
 export function FolderSearch({ source, scopeId, onOpenFile }) {

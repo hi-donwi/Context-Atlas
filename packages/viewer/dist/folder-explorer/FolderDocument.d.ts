@@ -1,4 +1,4 @@
-import type { ContentSource, FileContent } from '@context-atlas/core';
+import type { ContentSource, FileContent } from 'context-atlas-core';
 interface FolderDocumentProps {
     readonly path: string;
     readonly file: FileContent;

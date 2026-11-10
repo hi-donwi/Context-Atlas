@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { FileContent } from '@context-atlas/core';
+import type { FileContent } from 'context-atlas-core';
 import { isSafeRasterImageContent, resolveMarkdownTarget } from './markdown-targets.js';
 
 describe('resolveMarkdownTarget', () => {

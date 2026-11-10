@@ -1,5 +1,5 @@
 import { FileText, Folder, FolderOpen } from 'lucide-react';
-import type { Entry } from '@context-atlas/core';
+import type { Entry } from 'context-atlas-core';
 import { formatFolderMessage, useFolderMessages } from './locale.js';
 import { visibleFolderEntries } from './visible-entries.js';
 

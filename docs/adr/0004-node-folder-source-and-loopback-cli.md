@@ -9,7 +9,7 @@
 
 Phase 1 provides framework-neutral source contracts and pure path, exclusion, metadata,
 link, and folder-profile helpers. A local filesystem adapter and command-line server need
-Node APIs, while `@context-atlas/core` is also consumed by browser bundles. The 0.2
+Node APIs, while `context-atlas-core` is also consumed by browser bundles. The 0.2
 specification requires local serving to be read-only, loopback-only, and bounded to one
 authorized folder scope.
 
@@ -25,7 +25,7 @@ workspace scopes, and remote HTTP sources out of this phase.
 
 ### Positive
 
-- Browser consumers can continue importing `@context-atlas/core` without Node polyfills.
+- Browser consumers can continue importing `context-atlas-core` without Node polyfills.
 - The same filesystem source can be embedded by Node hosts or used by the CLI.
 - Local HTTP access is explicit, read-only, and limited to one folder scope.
 

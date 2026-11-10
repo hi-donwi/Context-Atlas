@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Entry } from '@context-atlas/core';
+import type { Entry } from 'context-atlas-core';
 import {
   findDefaultDocument,
   formatExplorerLocation,

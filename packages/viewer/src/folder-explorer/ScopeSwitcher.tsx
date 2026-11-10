@@ -1,5 +1,5 @@
 import { ChevronDown } from 'lucide-react';
-import type { ScopeInfo } from '@context-atlas/core';
+import type { ScopeInfo } from 'context-atlas-core';
 import { useFolderMessages } from './locale.js';
 
 export interface ScopeSwitcherProps {

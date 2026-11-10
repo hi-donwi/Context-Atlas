@@ -1,4 +1,4 @@
-import type { ContentSource, FileContent } from '@context-atlas/core';
+import type { ContentSource, FileContent } from 'context-atlas-core';
 import { Info } from 'lucide-react';
 import { DelimitedTable } from './DelimitedTable.js';
 import { MarkdownDocument } from './MarkdownDocument.js';

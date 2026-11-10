@@ -92,7 +92,7 @@ describe('runCli', () => {
   beforeEach(async () => {
     [root, uiRoot] = await Promise.all([
       mkdtemp(join(tmpdir(), 'context-atlas-cli-')),
-      mkdtemp(join(tmpdir(), 'context-atlas-cli-ui-')),
+      mkdtemp(join(tmpdir(), '@context-atlas/cli-ui-')),
     ]);
     await mkdir(join(uiRoot, 'assets'));
     await writeFile(join(uiRoot, 'index.html'), '<!doctype html><title>Atlas</title>');

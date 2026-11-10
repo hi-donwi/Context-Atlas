@@ -1,7 +1,7 @@
 import { isAbsolute, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { openContextSource, startLocalApiServer } from '@context-atlas/source-node';
-import type { LocalApiServer } from '@context-atlas/source-node';
+import { openContextSource, startLocalApiServer } from 'context-atlas-source-node';
+import type { LocalApiServer } from 'context-atlas-source-node';
 
 const USAGE = 'Usage: context-atlas [folder] [--port <port>] [--project <key>]';
 const PROJECT_KEY = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;

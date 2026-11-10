@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import type { Entry } from '@context-atlas/core';
+import type { Entry } from 'context-atlas-core';
 import { FolderTree } from './FolderTree.js';
 
 function renderTree(entries: Entry[]): string {

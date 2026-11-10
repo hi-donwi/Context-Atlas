@@ -1,4 +1,4 @@
-import type { Entry } from '@context-atlas/core';
+import type { Entry } from 'context-atlas-core';
 export interface ExplorerLocation {
     readonly scopeId: string;
     readonly path: string;

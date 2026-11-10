@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import type { FileType } from '@context-atlas/core';
+import type { FileType } from 'context-atlas-core';
 
 export type FolderLocale = 'en' | 'id';
 

@@ -16,7 +16,7 @@ import {
   normalizeDirectoryPath,
   normalizeRelativePath,
   UnsafePathError,
-} from '@context-atlas/core';
+} from 'context-atlas-core';
 import type {
   ContentSource,
   Entry,
@@ -24,7 +24,7 @@ import type {
   FileType,
   SearchHit,
   SourceInfo,
-} from '@context-atlas/core';
+} from 'context-atlas-core';
 
 const MAX_METADATA_BYTES = 64 * 1024;
 const MAX_TITLE_SCAN_BYTES = 64 * 1024;

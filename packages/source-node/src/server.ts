@@ -12,7 +12,7 @@ import {
   UnsafePathError,
   type ContentSource,
   type FileContent,
-} from '@context-atlas/core';
+} from 'context-atlas-core';
 
 const API_PREFIX = '/atlas/api/';
 const MAX_TEXT_RESPONSE_BYTES = 5 * 1024 * 1024;

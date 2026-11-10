@@ -1,4 +1,4 @@
-import type { Entry } from '@context-atlas/core';
+import type { Entry } from 'context-atlas-core';
 interface FolderTreeProps {
     readonly entries: readonly Entry[];
     readonly entriesByDirectory: Readonly<Record<string, readonly Entry[]>>;

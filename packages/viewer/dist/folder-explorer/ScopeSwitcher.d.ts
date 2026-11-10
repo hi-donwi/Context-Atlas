@@ -1,4 +1,4 @@
-import type { ScopeInfo } from '@context-atlas/core';
+import type { ScopeInfo } from 'context-atlas-core';
 export interface ScopeSwitcherProps {
     readonly scopes: readonly ScopeInfo[];
     readonly scopeId: string | null;

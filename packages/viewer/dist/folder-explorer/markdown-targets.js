@@ -1,4 +1,4 @@
-import { isExcludedPath, MAX_FILE_SIZE_BYTES, normalizeRelativePath, UnsafePathError, } from '@context-atlas/core';
+import { isExcludedPath, MAX_FILE_SIZE_BYTES, normalizeRelativePath, UnsafePathError, } from 'context-atlas-core';
 const SCHEME_PREFIX = /^[a-z][a-z\d+.-]*:/i;
 const UNSAFE_PATH_CHARACTERS = /[\\%:\u0000-\u001f\u007f]/;
 /** Resolve a Markdown target within one scope without consulting or traversing its directory tree. */

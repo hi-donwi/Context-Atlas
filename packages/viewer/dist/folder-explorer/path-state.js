@@ -1,4 +1,4 @@
-import { normalizeRelativePath, UnsafePathError } from '@context-atlas/core';
+import { normalizeRelativePath, UnsafePathError } from 'context-atlas-core';
 /** Prefer the conventional folder landing documents without selecting directories. */
 export function findDefaultDocument(entries) {
     for (const name of ['README.md', 'index.md']) {

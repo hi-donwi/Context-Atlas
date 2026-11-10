@@ -56,6 +56,25 @@ project's memory, runs, client notes, group, and declared context repository. Ad
 npm start -- /path/to/workspace/context --project <key> --port 4317
 ```
 
+### Run from a context repository with the npm CLI
+
+The published npm CLI can be run from a target context repository. Add this script to its
+`package.json`:
+
+```json
+{
+  "private": true,
+  "scripts": {
+    "atlas": "npm exec --yes --package=context-atlas-cli@0.1.0 -- context-atlas . --port 4317"
+  }
+}
+```
+
+Then run `npm run atlas` from that repository's root. The command uses the current directory
+as its context folder, so it does not depend on a relative path back to the Context Atlas
+checkout. The CLI package bundles the browser UI and depends on the published `core` and
+`source-node` packages.
+
 The explorer never writes to the folder, binds only to the loopback interface, and does
 not upload anything. `.git/`, `.local/`, `node_modules/`, `.env*`, keys, and similar paths
 are never listed or served.
@@ -113,14 +132,34 @@ the viewer. The allowlist is a selection mechanism, not an authorization system.
 
 | Package                          | Responsibility                                                      |
 | -------------------------------- | ------------------------------------------------------------------- |
+| `context-atlas-core`            | Shared content contracts and safe path handling                    |
+| `context-atlas-source-node`     | Filesystem/workspace sources and the read-only local API            |
+| `context-atlas-cli`             | `context-atlas` command and bundled browser UI                      |
 | `@context-atlas/model`           | Snapshot types, runtime validation, graph selection, context export |
 | `@context-atlas/adapter-openapi` | OpenAPI JSON to declared context facts                              |
 | `@context-atlas/viewer`          | Embeddable React navigation, graph, inspector, and context actions  |
 | `@context-atlas/demo`            | Synthetic projects and local file import                            |
 
-These packages are developed together as npm workspaces. The model and viewer also ship
-their generated package files, so a host can install them from a pinned Git commit without
-publishing them to a package registry. For example:
+Publish the CLI packages in dependency order: `core`, `source-node`, then `cli`. Build the
+CLI and preview each package before release:
+
+```sh
+npm run build:cli
+npm pack --workspace context-atlas-core --dry-run
+npm pack --workspace context-atlas-source-node --dry-run
+npm pack --workspace context-atlas-cli --dry-run
+```
+
+After review, publish each package in that order:
+
+```sh
+npm publish --workspace context-atlas-core
+npm publish --workspace context-atlas-source-node
+npm publish --workspace context-atlas-cli
+```
+
+The model and viewer also ship their generated package files, so a host can install them
+from a pinned Git commit without publishing them to a package registry. For example:
 
 ```sh
 pnpm add 'github:hi-donwi/Context-Atlas#<commit-sha>&path:/packages/model' \

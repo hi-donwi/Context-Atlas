@@ -1,4 +1,4 @@
-import { type ContentSource, type Entry, type FileContent, type SourceInfo } from '@context-atlas/core';
+import { type ContentSource, type Entry, type FileContent, type SourceInfo } from 'context-atlas-core';
 interface ChangeRefreshPlan {
     readonly directories: string[];
     readonly refreshSelectedFile: boolean;

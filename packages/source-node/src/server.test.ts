@@ -3,7 +3,7 @@ import { request as httpRequest } from 'node:http';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ContentSource } from '@context-atlas/core';
+import type { ContentSource } from 'context-atlas-core';
 import { openFolderSource } from './filesystem-source.js';
 import { startLocalApiServer } from './server.js';
 

@@ -1,4 +1,4 @@
-import { type ContentSource } from '@context-atlas/core';
+import { type ContentSource } from 'context-atlas-core';
 interface FolderSearchProps {
     readonly source: ContentSource;
     readonly scopeId: string | null;

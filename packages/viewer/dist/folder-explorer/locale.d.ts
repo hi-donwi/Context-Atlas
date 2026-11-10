@@ -1,4 +1,4 @@
-import type { FileType } from '@context-atlas/core';
+import type { FileType } from 'context-atlas-core';
 export type FolderLocale = 'en' | 'id';
 declare const english: {
     language: string;

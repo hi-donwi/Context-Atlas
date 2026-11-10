@@ -59,7 +59,7 @@ projects.
 
 ## ContentSource contract
 
-`@context-atlas/core` defines the framework-neutral TypeScript contract. Phase 0 declares
+`context-atlas-core` defines the framework-neutral TypeScript contract. Phase 0 declares
 types only; source implementations, validation, path safety, and search behavior are
 implemented in later phases. Paths are relative to a scope, and the source must enforce its
 own scope on every operation.
@@ -312,5 +312,5 @@ Public fixtures and screenshots use synthetic data only.
 - Static export of the workspace root, All scopes, or multiple project scopes.
 - Starting a Kerangka development server (level 3); that requires a later ADR.
 - A CLI, renderer implementation, or runtime behavior in phase 0. Phase 0 records decisions,
-  drafts this specification, and declares the `@context-atlas/core` types only.
+  drafts this specification, and declares the `context-atlas-core` types only.
 - Migrating a host integration or client-specific study material into the public repository.

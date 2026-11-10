@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ChevronDown, FolderPlus, Languages, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import type { ContentSource } from '@context-atlas/core';
+import type { ContentSource } from 'context-atlas-core';
 import { FolderDocument } from './folder-explorer/FolderDocument.js';
 import { FolderSearch } from './folder-explorer/FolderSearch.js';
 import { FolderTree } from './folder-explorer/FolderTree.js';

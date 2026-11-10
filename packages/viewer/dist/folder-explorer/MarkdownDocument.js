@@ -2,7 +2,7 @@ import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-run
 import { Children, createElement, isValidElement, useEffect, useState, } from 'react';
 import Markdown, {} from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { splitFrontmatter } from '@context-atlas/core';
+import { splitFrontmatter } from 'context-atlas-core';
 import { DelimitedTable } from './DelimitedTable.js';
 import { MermaidDiagram } from './MermaidDiagram.js';
 import { formatExplorerLocation } from './path-state.js';

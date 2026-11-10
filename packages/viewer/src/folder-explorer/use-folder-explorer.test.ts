@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { SourceInfo } from '@context-atlas/core';
+import type { SourceInfo } from 'context-atlas-core';
 import { chooseInitialScope, planChangedPaths } from './use-folder-explorer.js';
 
 describe('planChangedPaths', () => {

@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { MAX_FILE_SIZE_BYTES } from '@context-atlas/core';
+import { MAX_FILE_SIZE_BYTES } from 'context-atlas-core';
 import {
   FileSystemContentSource,
   FileSystemSourceError,

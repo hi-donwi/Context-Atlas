@@ -12,9 +12,9 @@
   },
   "scripts": {
     "start": "node scripts/start.mjs",
-    "build:cli": "npm run build --workspace @context-atlas/core && npm run build --workspace @context-atlas/source-node && npm run build --workspace @context-atlas/cli-ui && npm run build --workspace @context-atlas/cli",
+    "build:cli": "npm run build --workspace context-atlas-core && npm run build --workspace context-atlas-source-node && npm run build --workspace @context-atlas/cli-ui && npm run build --workspace context-atlas-cli",
     "dev:demo": "npm run dev --workspace @context-atlas/demo",
-    "build": "npm run build --workspace @context-atlas/core && npm run build --workspace @context-atlas/source-node && npm run build --workspace @context-atlas/model && npm run build --workspace @context-atlas/adapter-openapi && npm run build --workspace @context-atlas/viewer && npm run build --workspace @context-atlas/cli-ui && npm run build --workspace @context-atlas/demo && npm run build --workspace @context-atlas/cli",
+    "build": "npm run build --workspace context-atlas-core && npm run build --workspace context-atlas-source-node && npm run build --workspace @context-atlas/model && npm run build --workspace @context-atlas/adapter-openapi && npm run build --workspace @context-atlas/viewer && npm run build --workspace @context-atlas/cli-ui && npm run build --workspace @context-atlas/demo && npm run build --workspace context-atlas-cli",
     "typecheck": "tsc --noEmit -p tsconfig.check.json",
     "test": "vitest run",
     "test:e2e": "npm run build && playwright test",

@@ -1,5 +1,5 @@
-import { normalizeRelativePath, UnsafePathError } from '@context-atlas/core';
-import type { Entry } from '@context-atlas/core';
+import { normalizeRelativePath, UnsafePathError } from 'context-atlas-core';
+import type { Entry } from 'context-atlas-core';
 
 export interface ExplorerLocation {
   readonly scopeId: string;

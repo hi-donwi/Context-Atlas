@@ -10,7 +10,7 @@ import {
   parseWorkspaceRegistry,
   planWorkspaceScopes,
   UnsafePathError,
-} from '@context-atlas/core';
+} from 'context-atlas-core';
 import type {
   ContentSource,
   Entry,
@@ -20,7 +20,7 @@ import type {
   SourceInfo,
   WorkspaceMount,
   WorkspaceScopePlan,
-} from '@context-atlas/core';
+} from 'context-atlas-core';
 import { FileSystemContentSource, FileSystemSourceError } from './filesystem-source.js';
 
 const WATCH_DEBOUNCE_MS = 100;
