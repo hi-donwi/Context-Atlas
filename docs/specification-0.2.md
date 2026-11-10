@@ -29,6 +29,18 @@ row's `context_repo` folder when declared and present. `works/` is excluded from
 scopes. All may be used by a human reader but is never an export scope; export must be
 bound to one project. A host profile must apply the same boundary before supplying content.
 
+The local CLI implements the workspace profile. A project scope lists its parts as top-level
+folders: the declared context repository under its folder name (with a `-repo` suffix if that
+name is `memory`, `runs`, `client`, or `group`), `memory/`, `runs/`, `client/` (the client
+folder without `groups/`), and `group/` when the registry row names one. A client scope lists
+`client/` and `projects/<key>/…` for each of its projects. Parts that do not exist are omitted.
+Registry paths are relative to the workspace folder, the parent of the opened context folder;
+a context repository that resolves outside it or under the denylist is skipped. Scope ids are
+`all`, `client:<client>`, and `project:<key>`, and each scope carries a `kind` for grouping in
+the scope switcher. `--project <key>` describes only that project's scope and refuses every
+other scope, so a session bound to one project cannot read other clients through the explorer.
+Workspace change events are full refreshes (`paths: []`), because mounts overlap.
+
 The fixed denylist applies in every profile: `.git/`, `.local/`, `node_modules/`, `dist/`,
 `__pycache__/`, `.DS_Store`, `.env*`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `id_rsa*`,
 `*.kdbx`, and symlinks resolving outside the scope root. These paths are neither listed
@@ -80,8 +92,11 @@ are URL-encoded; `scope` is required except for `info`.
 | `GET /atlas/api/search?scope=&q=`  | Scope and a trimmed query (1–200 characters) | Up to 20 ranked `SearchHit`s; each snippet is at most 240 characters and includes a matching line number. |
 | `GET /atlas/api/events`            | None                                         | Same-origin `text/event-stream` change notifications for the authorized source.                           |
 
-The folder CLI implements the info, tree, file, local search, and change-event routes. Run `context-atlas [folder] [--port <port>]`; it defaults to the current
-directory and an available port. The CLI binds only to `127.0.0.1`, rejects unexpected
+The folder CLI implements the info, tree, file, local search, and change-event routes.
+Run `context-atlas [folder] [--port <port>] [--project <key>]`, or
+`npm start -- [folder] [options]` from a checkout; it defaults to the current directory and
+an available port. A relative folder given through an npm script is resolved from the
+directory npm was invoked in. The CLI binds only to `127.0.0.1`, rejects unexpected
 `Host` values, sends no CORS permission, and uses `default-src 'self'`. Text responses are
 limited to 5 MiB. The file route returns JSON with an `encoding` field: `utf-8` for textual
 content and `base64` for binary content. Errors use RFC 9457 `application/problem+json`

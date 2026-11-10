@@ -47,6 +47,15 @@ Open `http://127.0.0.1:4317/`. The explorer lands on the folder's `atlas.json`
 directory you ran `npm` in; without a folder, the explorer opens that directory. Without
 `--port`, it picks a free port and prints the address. Stop it with `Ctrl+C`.
 
+A workspace context folder, one that holds `registry.tsv` and `memory/projects/`, opens with
+a scope switcher for all context, one client, or one project. A project scope gathers that
+project's memory, runs, client notes, group, and declared context repository. Add
+`--project <key>` to show that one project and refuse every other scope:
+
+```sh
+npm start -- /path/to/workspace/context --project <key> --port 4317
+```
+
 The explorer never writes to the folder, binds only to the loopback interface, and does
 not upload anything. `.git/`, `.local/`, `node_modules/`, `.env*`, keys, and similar paths
 are never listed or served.
