@@ -33,6 +33,8 @@ export interface ScopeInfo {
    * has already checked that it is a safe, visible file.
    */
   readonly defaultDocument?: string;
+  /** Optional grouping for a scope switcher; set by the workspace profile. */
+  readonly kind?: 'all' | 'client' | 'project';
 }
 
 /** Descriptive metadata for a content source and its available scopes. */
@@ -135,6 +137,14 @@ export type { FrontmatterField, SplitFrontmatter } from './frontmatter.js';
 export { resolveLink } from './links.js';
 export type { LinkEntry, ResolvedLink } from './links.js';
 export { createFolderSourceInfo } from './folder-profile.js';
+export { parseWorkspaceRegistry, planWorkspaceScopes } from './workspace-profile.js';
+export type {
+  WorkspaceMount,
+  WorkspaceProject,
+  WorkspaceScopeKind,
+  WorkspaceScopeOptions,
+  WorkspaceScopePlan,
+} from './workspace-profile.js';
 export type { FolderSourceOptions } from './folder-profile.js';
 export {
   MAX_SEARCH_QUERY_LENGTH,
