@@ -29,15 +29,38 @@ flowchart LR
 
 Requires Node.js 22.12 or later and npm.
 
+### Open a folder
+
+This is how you read a real project's documents. `npm start` builds the folder explorer
+and serves the folder you name, read-only, on `127.0.0.1`:
+
 ```sh
 git clone https://github.com/hi-donwi/Context-Atlas.git
 cd Context-Atlas
 npm ci
-npm run dev
+npm start -- /path/to/project-docs --port 4317
 ```
 
-Open the local URL printed by Vite. The demo runs in the browser; it does not require
-a backend, database, account, or API key.
+Open `http://127.0.0.1:4317/`. The explorer lands on the folder's `atlas.json`
+`defaultDocument`, its `README.md`, or its `index.md`, at an address such as
+`http://127.0.0.1:4317/#/folder/README.md`. A relative folder is resolved from the
+directory you ran `npm` in; without a folder, the explorer opens that directory. Without
+`--port`, it picks a free port and prints the address. Stop it with `Ctrl+C`.
+
+The explorer never writes to the folder, binds only to the loopback interface, and does
+not upload anything. `.git/`, `.local/`, `node_modules/`, `.env*`, keys, and similar paths
+are never listed or served.
+
+### Synthetic demo
+
+```sh
+npm run dev:demo
+```
+
+The demo is a Vite app with synthetic API and website projects (for example Atlas
+Commerce). It does not read your files: use it to explore the snapshot viewer, not to
+read a project. It runs in the browser and does not require a backend, database,
+account, or API key.
 
 ## Explore
 

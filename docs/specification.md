@@ -36,7 +36,8 @@ navigation, inspector access, readable controls, and bounded horizontal content.
 ## Commands and layout
 
 Use Node 22.12 or later and npm workspaces. `npm ci` installs locked dependencies;
-`npm run dev` serves the demo; `npm run verify` runs strict type checks, unit tests,
+`npm start -- <folder>` serves the folder explorer; `npm run dev:demo` serves the
+synthetic demo; `npm run verify` runs strict type checks, unit tests,
 package builds, and the demo build; `npm run test:e2e` verifies browser journeys.
 
 `packages/model` owns contracts, validation, graph selection, and exports;

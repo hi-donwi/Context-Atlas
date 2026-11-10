@@ -9,7 +9,8 @@ Use Node.js 22.12 or later and the committed npm lockfile.
 
 ```sh
 npm ci
-npm run dev
+npm start -- docs   # folder explorer on this repository's docs
+npm run dev:demo       # synthetic snapshot demo
 npm run verify
 npx playwright install chromium
 npm run test:e2e
