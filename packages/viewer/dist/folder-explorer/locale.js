@@ -89,6 +89,11 @@ const english = {
     diagramFailed: 'This Mermaid diagram could not be rendered.',
     viewDiagramSource: 'View diagram source',
     renderingDiagram: 'Rendering Mermaid diagram…',
+    workspaceContext: 'Context Atlas · Workspace context',
+    scope: 'Scope',
+    scopeAll: 'All context',
+    scopeClients: 'Clients',
+    scopeProjects: 'Projects',
 };
 const indonesian = {
     language: 'Bahasa antarmuka',
@@ -180,6 +185,11 @@ const indonesian = {
     diagramFailed: 'Diagram Mermaid ini tidak dapat ditampilkan.',
     viewDiagramSource: 'Lihat sumber diagram',
     renderingDiagram: 'Menampilkan diagram Mermaid…',
+    workspaceContext: 'Context Atlas · Konteks workspace',
+    scope: 'Cakupan',
+    scopeAll: 'Seluruh konteks',
+    scopeClients: 'Klien',
+    scopeProjects: 'Proyek',
 };
 export const folderMessages = { en: english, id: indonesian };
 export const FolderLocaleContext = createContext('en');

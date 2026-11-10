@@ -373,6 +373,57 @@
   display: none;
 }
 
+.atlas-folder-scope {
+  display: grid;
+  gap: 0.35rem;
+  margin-block: 0 1.25rem;
+  min-inline-size: 0;
+}
+
+.atlas-folder-scope__label {
+  color: var(--atlas-folder-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.atlas-folder-scope--locked strong {
+  overflow-wrap: anywhere;
+}
+
+.atlas-folder-scope__control {
+  position: relative;
+  display: block;
+  min-inline-size: 0;
+}
+
+.atlas-folder-scope select {
+  appearance: none;
+  inline-size: 100%;
+  min-block-size: 2.75rem;
+  padding: 0.45rem 2.2rem 0.45rem 0.75rem;
+  border: 1px solid var(--atlas-folder-border);
+  border-radius: 0.5rem;
+  color: var(--atlas-folder-ink);
+  background: var(--atlas-folder-paper);
+  font: inherit;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.atlas-folder-scope select:hover {
+  border-color: var(--atlas-folder-accent);
+}
+
+.atlas-folder-scope__chevron {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: 0.7rem;
+  transform: translateY(-50%);
+  color: var(--atlas-folder-muted);
+  pointer-events: none;
+}
+
 .atlas-folder-explorer__navigation h2 {
   margin-block-end: 0.5rem;
   font-size: 0.8rem;

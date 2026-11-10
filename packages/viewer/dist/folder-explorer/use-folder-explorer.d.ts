@@ -4,6 +4,11 @@ interface ChangeRefreshPlan {
     readonly refreshSelectedFile: boolean;
 }
 export declare function planChangedPaths(paths: readonly string[], cachedDirectories: ReadonlySet<string>, expandedDirectories: ReadonlySet<string>, selectedPath: string | null): ChangeRefreshPlan;
+/**
+ * Pick the scope to open first: the one the address names when the source offers it, otherwise
+ * the first. Returns undefined for a profile or scope list the explorer cannot present.
+ */
+export declare function chooseInitialScope(info: SourceInfo, addressScopeId: string | undefined): string | undefined;
 export interface FolderExplorerState {
     readonly info: SourceInfo | null;
     readonly scopeId: string | null;
@@ -22,6 +27,8 @@ export interface FolderExplorerState {
     readonly retryDirectory: (path: string) => void;
     readonly selectFile: (path: string, fragment?: string) => void;
     readonly retryFile: () => void;
+    /** Open another scope the source offers; the workspace profile's scope switcher uses it. */
+    readonly selectScope: (scopeId: string) => void;
 }
 export declare function useFolderExplorer(source: ContentSource): FolderExplorerState;
 export {};

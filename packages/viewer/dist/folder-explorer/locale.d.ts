@@ -90,6 +90,11 @@ declare const english: {
     diagramFailed: string;
     viewDiagramSource: string;
     renderingDiagram: string;
+    workspaceContext: string;
+    scope: string;
+    scopeAll: string;
+    scopeClients: string;
+    scopeProjects: string;
 };
 type FolderMessages = {
     readonly [K in keyof typeof english]: string;

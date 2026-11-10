@@ -4,6 +4,7 @@ import type { ContentSource } from '@context-atlas/core';
 import { FolderDocument } from './folder-explorer/FolderDocument.js';
 import { FolderSearch } from './folder-explorer/FolderSearch.js';
 import { FolderTree } from './folder-explorer/FolderTree.js';
+import { ScopeSwitcher } from './folder-explorer/ScopeSwitcher.js';
 import {
   FolderLocaleContext,
   formatFolderFileType,
@@ -21,7 +22,7 @@ export interface FolderExplorerProps {
   readonly source: ContentSource;
 }
 
-/** Read-only browser explorer for a single folder `ContentSource`. */
+/** Read-only browser explorer for a folder or workspace-context `ContentSource`. */
 export function FolderExplorer({ source }: FolderExplorerProps) {
   const [locale, setLocale] = useState<FolderLocale>('en');
   useEffect(() => setLocale(loadFolderLocale()), []);
@@ -50,6 +51,9 @@ function LocalizedFolderExplorer({
   const rootEntries = prioritizeRootEntries(
     visibleFolderEntries(state.entriesByDirectory[''] ?? []),
   );
+  const rootLoaded = state.entriesByDirectory[''] !== undefined;
+  const rootError = !rootLoaded && state.directoryErrors[''] !== undefined;
+  const workspace = state.info?.profile === 'workspace';
 
   return (
     <div className="atlas-folder-explorer">
@@ -58,7 +62,9 @@ function LocalizedFolderExplorer({
       </a>
       <header className="atlas-folder-explorer__header" lang={locale}>
         <div className="atlas-folder-explorer__brand">
-          <span className="atlas-folder-explorer__eyebrow">{text.localFolder}</span>
+          <span className="atlas-folder-explorer__eyebrow">
+            {workspace ? text.workspaceContext : text.localFolder}
+          </span>
           <div className="atlas-folder-explorer__brand-title">
             <h1>{state.info?.title ?? 'Context Atlas'}</h1>
             <span className="atlas-folder-explorer__read-only">{text.readOnly}</span>
@@ -111,6 +117,13 @@ function LocalizedFolderExplorer({
           lang={locale}
           data-open={navigationOpen}
         >
+          {workspace && state.info !== null ? (
+            <ScopeSwitcher
+              scopes={state.info.scopes}
+              scopeId={state.scopeId}
+              onSelectScope={state.selectScope}
+            />
+          ) : null}
           <h2>{text.files}</h2>
           {state.sourceLoading ? (
             <p className="atlas-folder-explorer__muted" role="status">
@@ -123,6 +136,17 @@ function LocalizedFolderExplorer({
                 {text.retry}
               </button>
             </div>
+          ) : rootError ? (
+            <div className="atlas-folder-explorer__inline-error">
+              <p role="alert">{text.directoryError}</p>
+              <button type="button" onClick={() => state.retryDirectory('')}>
+                {text.retry}
+              </button>
+            </div>
+          ) : !rootLoaded ? (
+            <p className="atlas-folder-explorer__muted" role="status">
+              {text.loadingContents}
+            </p>
           ) : rootEntries.length === 0 ? (
             <p className="atlas-folder-explorer__muted">{text.emptyFolder}</p>
           ) : (
@@ -146,7 +170,7 @@ function LocalizedFolderExplorer({
           tabIndex={-1}
           aria-busy={state.sourceLoading || state.fileLoading}
         >
-          {state.sourceLoading ? (
+          {state.sourceLoading || (!rootLoaded && !rootError && state.sourceError === null) ? (
             <p className="atlas-folder-explorer__status" role="status" lang={locale}>
               {text.loadingFolder}
             </p>

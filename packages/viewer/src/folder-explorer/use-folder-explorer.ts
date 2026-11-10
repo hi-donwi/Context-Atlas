@@ -68,6 +68,21 @@ export function planChangedPaths(
   return { directories: [...directories].sort(), refreshSelectedFile };
 }
 
+/**
+ * Pick the scope to open first: the one the address names when the source offers it, otherwise
+ * the first. Returns undefined for a profile or scope list the explorer cannot present.
+ */
+export function chooseInitialScope(
+  info: SourceInfo,
+  addressScopeId: string | undefined,
+): string | undefined {
+  const supported =
+    (info.profile === 'folder' && info.scopes.length === 1) ||
+    (info.profile === 'workspace' && info.scopes.length > 0);
+  if (!supported) return undefined;
+  return info.scopes.find((scope) => scope.id === addressScopeId)?.id ?? info.scopes[0]?.id;
+}
+
 export interface FolderExplorerState {
   readonly info: SourceInfo | null;
   readonly scopeId: string | null;
@@ -86,6 +101,8 @@ export interface FolderExplorerState {
   readonly retryDirectory: (path: string) => void;
   readonly selectFile: (path: string, fragment?: string) => void;
   readonly retryFile: () => void;
+  /** Open another scope the source offers; the workspace profile's scope switcher uses it. */
+  readonly selectScope: (scopeId: string) => void;
 }
 
 export function useFolderExplorer(source: ContentSource): FolderExplorerState {
@@ -103,6 +120,8 @@ export function useFolderExplorer(source: ContentSource): FolderExplorerState {
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const fileRequestId = useRef(0);
+  const scopeRequestId = useRef(0);
+  const landingHistoryMode = useRef<HistoryMode>('replace');
   const initialSelectionHandled = useRef(false);
   const entriesByDirectoryRef = useRef(entriesByDirectory);
   const expandedDirectoriesRef = useRef(expandedDirectories);
@@ -147,6 +166,7 @@ export function useFolderExplorer(source: ContentSource): FolderExplorerState {
     let active = true;
     initialSelectionHandled.current = false;
     fileRequestId.current += 1;
+    scopeRequestId.current += 1;
     setInfo(null);
     setScopeId(null);
     setEntriesByDirectory({});
@@ -161,15 +181,16 @@ export function useFolderExplorer(source: ContentSource): FolderExplorerState {
     void (async () => {
       try {
         const sourceInfo = await source.describe();
-        if (sourceInfo.profile !== 'folder' || sourceInfo.scopes.length !== 1) {
-          throw new Error('unsupported profile');
-        }
-        const folderScope = sourceInfo.scopes[0];
-        if (folderScope === undefined) throw new Error('missing scope');
-        const rootEntries = await source.list(folderScope.id, '');
+        const initialScope = chooseInitialScope(
+          sourceInfo,
+          parseExplorerLocation(window.location.hash)?.scopeId,
+        );
+        if (initialScope === undefined) throw new Error('unsupported profile');
+        const rootEntries = await source.list(initialScope, '');
         if (!active) return;
+        landingHistoryMode.current = 'replace';
         setInfo(sourceInfo);
-        setScopeId(folderScope.id);
+        setScopeId(initialScope);
         setEntriesByDirectory({ '': rootEntries });
       } catch {
         if (active)
@@ -187,6 +208,46 @@ export function useFolderExplorer(source: ContentSource): FolderExplorerState {
     };
   }, [source, sourceAttempt]);
 
+  const switchScope = useCallback(
+    (nextScopeId: string, historyMode: HistoryMode): void => {
+      if (info === null || nextScopeId === scopeId) return;
+      if (!info.scopes.some((scope) => scope.id === nextScopeId)) return;
+      const requestId = ++scopeRequestId.current;
+      initialSelectionHandled.current = false;
+      fileRequestId.current += 1;
+      landingHistoryMode.current = historyMode;
+      setScopeId(nextScopeId);
+      setEntriesByDirectory({});
+      setExpandedDirectories(new Set());
+      setLoadingDirectories(new Set(['']));
+      setDirectoryErrors({});
+      setSelectedPath(null);
+      setSelectedFile(null);
+      setFileError(null);
+      setFileLoading(false);
+
+      void source
+        .list(nextScopeId, '')
+        .then((entries) => {
+          if (scopeRequestId.current === requestId) setEntriesByDirectory({ '': entries });
+        })
+        .catch(() => {
+          if (scopeRequestId.current === requestId) {
+            setDirectoryErrors({ '': 'Could not load this folder.' });
+          }
+        })
+        .finally(() => {
+          if (scopeRequestId.current === requestId) setLoadingDirectories(new Set());
+        });
+    },
+    [info, scopeId, source],
+  );
+
+  const selectScope = useCallback(
+    (nextScopeId: string) => switchScope(nextScopeId, 'push'),
+    [switchScope],
+  );
+
   useEffect(() => {
     const rootEntries = entriesByDirectory[''];
     if (scopeId === null || rootEntries === undefined || initialSelectionHandled.current) return;
@@ -199,7 +260,7 @@ export function useFolderExplorer(source: ContentSource): FolderExplorerState {
     }
     const scopeDefault = info?.scopes.find((scope) => scope.id === scopeId)?.defaultDocument;
     const defaultPath = scopeDefault ?? findDefaultDocument(rootEntries);
-    if (defaultPath !== undefined) void selectFile(defaultPath, 'replace');
+    if (defaultPath !== undefined) void selectFile(defaultPath, landingHistoryMode.current);
   }, [entriesByDirectory, info, scopeId, selectFile]);
 
   useEffect(() => {
@@ -208,6 +269,11 @@ export function useFolderExplorer(source: ContentSource): FolderExplorerState {
       const location = parseExplorerLocation(window.location.hash);
       if (location?.scopeId === scopeId) {
         void selectFile(location.path, 'none', location.fragment);
+      } else if (
+        location !== undefined &&
+        info?.scopes.some((scope) => scope.id === location.scopeId) === true
+      ) {
+        switchScope(location.scopeId, 'none');
       } else {
         fileRequestId.current += 1;
         setSelectedPath(null);
@@ -218,7 +284,7 @@ export function useFolderExplorer(source: ContentSource): FolderExplorerState {
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [scopeId, selectFile]);
+  }, [info, scopeId, selectFile, switchScope]);
 
   useEffect(() => {
     if (scopeId === null || selectedPath === null || selectedFile === null || fileLoading) return;
@@ -318,6 +384,7 @@ export function useFolderExplorer(source: ContentSource): FolderExplorerState {
     sourceError,
     selectedPath,
     selectedFile,
+    selectScope,
     fileLoading,
     fileError,
     reloadSource,

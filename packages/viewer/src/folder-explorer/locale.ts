@@ -94,6 +94,11 @@ const english = {
   diagramFailed: 'This Mermaid diagram could not be rendered.',
   viewDiagramSource: 'View diagram source',
   renderingDiagram: 'Rendering Mermaid diagram…',
+  workspaceContext: 'Context Atlas · Workspace context',
+  scope: 'Scope',
+  scopeAll: 'All context',
+  scopeClients: 'Clients',
+  scopeProjects: 'Projects',
 };
 
 type FolderMessages = { readonly [K in keyof typeof english]: string };
@@ -189,6 +194,11 @@ const indonesian: FolderMessages = {
   diagramFailed: 'Diagram Mermaid ini tidak dapat ditampilkan.',
   viewDiagramSource: 'Lihat sumber diagram',
   renderingDiagram: 'Menampilkan diagram Mermaid…',
+  workspaceContext: 'Context Atlas · Konteks workspace',
+  scope: 'Cakupan',
+  scopeAll: 'Seluruh konteks',
+  scopeClients: 'Klien',
+  scopeProjects: 'Proyek',
 };
 
 export const folderMessages: Record<FolderLocale, FolderMessages> = { en: english, id: indonesian };
